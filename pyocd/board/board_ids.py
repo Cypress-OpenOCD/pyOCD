@@ -104,5 +104,7 @@ BOARD_ID_TO_INFO = {
     "9900": BoardInfo(  "Microbit",             "nrf51",            "l1_microbit.bin",      ),
     "C004": BoardInfo(  "tinyK20",              "k20d50m",          "l1_k20d50m.bin",       ),
     "C006": BoardInfo(  "VBLUno51",             "nrf51",            "l1_nrf51.bin",         ),
+    "1105": BoardInfo(  "CY8C6xx7-WIFI-BT",     "cy8c6xx7",         "l1_cy8c6xx7.bin",      ),
+    "0B14": BoardInfo(  "CY8C6xx7-WIFI-BT",     "cy8c6xx7",         "l1_cy8c6xx7.bin",      ),
     }
 

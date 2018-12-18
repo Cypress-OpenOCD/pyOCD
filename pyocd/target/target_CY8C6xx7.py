@@ -366,9 +366,9 @@ flash_algo_sflash = {
 class CoreSight_CY8C6xx7(CoreSightTarget):
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x8000),
-        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, isBootMemory=True, algo=flash_algo_main),
-        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, isBootMemory=False, algo=flash_algo_work),
-        FlashRegion(start=0x16000000, length=0x8000, blocksize=0x200, isBootMemory=False, algo=flash_algo_sflash),
+        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, algo=flash_algo_main),
+        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, algo=flash_algo_work),
+        #FlashRegion(start=0x16000000, length=0x8000, blocksize=0x200, is_boot_memory=False, algo=flash_algo_sflash),
         RamRegion(start=0x08000000, length=0x10000)
     )
 
