@@ -30,7 +30,7 @@ flash_algo_main = {
     # Flash algorithm as a hex string
     'instructions': [
         0xE00ABE00, 0x062D780D, 0x24084068, 0xD3000040, 0x1E644058, 0x1C49D1FA, 0x2A001E52, 0x4770D1F2,
-        0x20004603, 0x46014770, 0x47702000, 0xf000b510, 0xbd10f972, 0x4604b510, 0xf0004620, 0xbd10f939,
+        0x20004603, 0x46014770, 0x47702000, 0xf000b510, 0xbd10f972, 0x4604b510, 0xf0004620, 0xbd10f915,
         0x4606b570, 0x4615460c, 0x46294622, 0xf0004630, 0xbd70f969, 0x4604b570, 0x4616460d, 0x46294632,
         0xf0004620, 0xbd70f81f, 0x47706001, 0x600a6802, 0x21004770, 0x1c49e000, 0x43424ad6, 0xd8fa428a,
         0xb5084770, 0x48d44669, 0xfff0f7ff, 0x0209210f, 0x40089800, 0xd1012800, 0xe0002001, 0x46032000,
@@ -132,7 +132,7 @@ flash_algo_main = {
     'flash_start': 0x10000000,
     'flash_size': 0x200000,
     'sector_sizes': (
-        (0x0, 0x40000),
+        (0x0, 0x200),
     )
 }
 
@@ -148,7 +148,7 @@ flash_algo_work = {
         0xb5084770, 0x48d54669, 0xfff0f7ff, 0x0209210f, 0x40089800, 0xd1012800, 0xe0002001, 0x46032000,
         0xbd084618, 0x4603b570, 0x461d460c, 0xe0052100, 0x5c6e5c50, 0xd00042b0, 0x1c49e002, 0xd3f742a1,
         0x1858bf00, 0xb5febd70, 0x460b4605, 0x20004616, 0x24009002, 0x01682700, 0x184049c1, 0xbf009000,
-        0x9800a901, 0xf7ff3010, 0x9801ffc1, 0x2b000fc7, 0x2f00d001, 0x2b00d103, 0x2f00d103, 0x2001d101,
+        0x9800a901, 0xf7ff301c, 0x9801ffc1, 0x2b000fc7, 0x2f00d001, 0x2b00d103, 0x2f00d103, 0x2001d101,
         0x2000e000, 0x2c004604, 0x9802d109, 0xd90042b0, 0x2001e007, 0xffadf7ff, 0x1c409802, 0x2c009002,
         0xbf00d0de, 0x21014620, 0xbdfe4048, 0x4604b5f8, 0x2600460d, 0x01602300, 0x184749a9, 0x4669bf00,
         0xf7ff4638, 0x9800ff93, 0x2b000fc3, 0x42aed106, 0xe005d900, 0xf7ff2001, 0x1c76ff8c, 0xd0ee2b00,
@@ -171,8 +171,8 @@ flash_algo_work = {
         0xf7ff4826, 0xbdf8ff28, 0x4605b5f8, 0x4617460e, 0x447c4c20, 0x49223c9a, 0xf7ff4620, 0x21fffe75,
         0x1d203107, 0xfe70f7ff, 0x46204629, 0xf7ff3008, 0x4631fe6b, 0x300c4620, 0xfe66f7ff, 0x48184669,
         0xff09f7ff, 0xb570bdf8, 0xb081b0ff, 0x26004605, 0xe0032400, 0x46692000, 0x1c645508, 0x02402001,
-        0xdbf74284, 0x46694602, 0xf7ff4628, 0x4606ffcd, 0xb07f4630, 0xbd70b001, 0x00000d05, 0x40210400,
-        0x40230000, 0x00000240, 0x40231008, 0x1c000100, 0x14000100, 0x00000128, 0x0a000100, 0x06000100,
+        0xdbf74284, 0x46694602, 0xf7ff4628, 0x4606ffcd, 0xb07f4630, 0xbd70b001, 0x00000d05, 0x40200000,
+        0x40220000, 0x00000240, 0x40221008, 0x1c000100, 0x14000100, 0x00000128, 0x0a000100, 0x06000100,
         0x05000100, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -260,7 +260,7 @@ flash_algo_sflash = {
         0xb5084770, 0x48e24669, 0xfff0f7ff, 0x0209210f, 0x40089800, 0xd1012800, 0xe0002001, 0x46032000,
         0xbd084618, 0x4603b570, 0x461d460c, 0xe0052100, 0x5c6e5c50, 0xd00042b0, 0x1c49e002, 0xd3f742a1,
         0x1858bf00, 0xb5febd70, 0x460b4605, 0x20004616, 0x24009002, 0x01682700, 0x184049ce, 0xbf009000,
-        0x9800a901, 0xf7ff3010, 0x9801ffc1, 0x2b000fc7, 0x2f00d001, 0x2b00d103, 0x2f00d103, 0x2001d101,
+        0x9800a901, 0xf7ff301c, 0x9801ffc1, 0x2b000fc7, 0x2f00d001, 0x2b00d103, 0x2f00d103, 0x2001d101,
         0x2000e000, 0x2c004604, 0x9802d109, 0xd90042b0, 0x2001e007, 0xffadf7ff, 0x1c409802, 0x2c009002,
         0xbf00d0de, 0x21014620, 0xbdfe4048, 0x4604b5f8, 0x2600460d, 0x01602300, 0x184749b6, 0x4669bf00,
         0xf7ff4638, 0x9800ff93, 0x2b000fc3, 0x42aed106, 0xe005d900, 0xf7ff2001, 0x1c76ff8c, 0xd0ee2b00,
@@ -285,7 +285,7 @@ flash_algo_sflash = {
         0xffdcf7ff, 0x2c004604, 0xe00dd000, 0x48232106, 0xffd4f7ff, 0x2c004604, 0xe005d000, 0x48202102,
         0xffccf7ff, 0xbf004604, 0x4620bf00, 0xb5f8bd10, 0x460e4605, 0x4c1b4617, 0x491b447c, 0xf7ff4620,
         0x21fffe43, 0x1d203107, 0xfe3ef7ff, 0x46204629, 0xf7ff3008, 0x4631fe39, 0x300c4620, 0xfe34f7ff,
-        0x48114669, 0xfed7f7ff, 0x0000bdf8, 0x00000d05, 0x40210400, 0x40230000, 0x00000288, 0x40231008,
+        0x48114669, 0xfed7f7ff, 0x0000bdf8, 0x00000d05, 0x40200000, 0x40220000, 0x00000288, 0x40221008,
         0x1c000100, 0x14000100, 0x00000170, 0x0a000100, 0x05000100, 0x16000800, 0x16001a00, 0x16005a00,
         0x16007c00, 0x00000070, 0x06000100, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -364,26 +364,26 @@ flash_algo_sflash = {
 }
 
 
-class CoreSight_CY8C6xx7(CoreSightTarget):
+class CoreSight_CY8C6xxA(CoreSightTarget):
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x8000),
-        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, algo=flash_algo_main),
+        FlashRegion(start=0x10000000, length=0x200000, blocksize=0x200, is_boot_memory=True, algo=flash_algo_main),
         FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, algo=flash_algo_work),
         # FlashRegion(start=0x16000000, length=0x8000, blocksize=0x200, is_boot_memory=False, algo=flash_algo_sflash),
         RamRegion(start=0x08000000, length=0x10000)
     )
 
     def __init__(self, link):
-        super(CoreSight_CY8C6xx7, self).__init__(link, self.memoryMap)
+        super(CoreSight_CY8C6xxA, self).__init__(link, self.memoryMap)
 
     def create_init_sequence(self):
-        seq = super(CoreSight_CY8C6xx7, self).create_init_sequence()
+        seq = super(CoreSight_CY8C6xxA, self).create_init_sequence()
         seq.replace_task('create_cores', self.create_cy8c6xx7_core)
         return seq
 
     def create_cy8c6xx7_core(self):
-        core0 = CortexM_CY8C6xx7(self, self.aps[1], self.memory_map, 0)
-        core1 = CortexM_CY8C6xx7(self, self.aps[2], self.memory_map, 1)
+        core0 = CortexM_CY8C6xxA(self, self.aps[1], self.memory_map, 0)
+        core1 = CortexM_CY8C6xxA(self, self.aps[2], self.memory_map, 1)
         self.aps[1].core = core0
         self.aps[2].core = core1
         core0.init()
@@ -392,7 +392,7 @@ class CoreSight_CY8C6xx7(CoreSightTarget):
         self.add_core(core1)
 
 
-class CortexM_CY8C6xx7(CortexM):
+class CortexM_CY8C6xxA(CortexM):
 
     def reset(self, software_reset=None):
         self.notify(Notification(event=Target.EVENT_PRE_RESET, source=self))
@@ -445,9 +445,9 @@ class CortexM_CY8C6xx7(CortexM):
         self.wait_halted()
 
         if self.core_number == 0:
-            vtbase = self.read_memory(0x402102B0)  # VTBASE_CM0
+            vtbase = self.read_memory(0x40201120)  # VTBASE_CM0
         elif self.core_number == 1:
-            vtbase = self.read_memory(0x402102C0)  # VTBASE_CM4
+            vtbase = self.read_memory(0x40200200)  # VTBASE_CM4
         else:
             raise Exception("Invalid CORE ID")
 
