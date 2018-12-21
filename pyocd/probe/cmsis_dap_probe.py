@@ -256,12 +256,8 @@ class CMSISDAPProbe(DebugProbe):
         return result if now else read_dp_result_callback
 
     def write_dp(self, addr, data):
-        # BHDT
-        # if addr == 8:
-        #    logging.info("----------------------------- DP SELECT = %08x", data)
-            
         reg_id = self.REG_ADDR_TO_ID_MAP[self.DP, addr]
-        
+
         # Skip writing DP SELECT register if its value is not changing.
         if addr == self.DP_SELECT:
             if data == self._dp_select:
@@ -317,11 +313,11 @@ class CMSISDAPProbe(DebugProbe):
     def read_ap_multiple(self, addr, count=1, now=True):
         assert type(addr) in (six.integer_types)
         ap_reg = self.REG_ADDR_TO_ID_MAP[self.AP, (addr & self.A32)]
-        
+
         try:
-            # BHDT  Select the AP and bank.
-            # self.write_dp(self.DP_SELECT, addr & self.APSEL_APBANKSEL)
-            
+            # Select the AP and bank.
+            self.write_dp(self.DP_SELECT, addr & self.APSEL_APBANKSEL)
+
             result = self._link.reg_read_repeat(count, ap_reg, dap_index=0, now=now)
         except DAPAccess.Error as exc:
             self._invalidate_cached_registers()
@@ -340,11 +336,11 @@ class CMSISDAPProbe(DebugProbe):
     def write_ap_multiple(self, addr, values):
         assert type(addr) in (six.integer_types)
         ap_reg = self.REG_ADDR_TO_ID_MAP[self.AP, (addr & self.A32)]
-        
+
         try:
-            # BHDT Select the AP and bank.
-            # self.write_dp(self.DP_SELECT, addr & self.APSEL_APBANKSEL)
-            
+            # Select the AP and bank.
+            self.write_dp(self.DP_SELECT, addr & self.APSEL_APBANKSEL)
+
             return self._link.reg_write_repeat(len(values), ap_reg, values, dap_index=0)
         except DAPAccess.Error as exc:
             self._invalidate_cached_registers()
