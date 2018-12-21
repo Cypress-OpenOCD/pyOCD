@@ -365,7 +365,7 @@ flash_algo_sflash = {
 
 from py_blob_orig import flash_algo
 
-class CoreSight_CY8C6xxA(CoreSightTarget):
+class CY8C6xxA(CoreSightTarget):
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
         FlashRegion(start=0x10000000, length=0x200000, blocksize=0x200, is_boot_memory=True, algo=flash_algo_main),
@@ -376,10 +376,10 @@ class CoreSight_CY8C6xxA(CoreSightTarget):
     )
 
     def __init__(self, link):
-        super(CoreSight_CY8C6xxA, self).__init__(link, self.memoryMap)
+        super(CY8C6xxA, self).__init__(link, self.memoryMap)
 
     def create_init_sequence(self):
-        seq = super(CoreSight_CY8C6xxA, self).create_init_sequence()
+        seq = super(CY8C6xxA, self).create_init_sequence()
         seq.replace_task('create_cores', self.create_cy8c6xx7_core)
         return seq
 
