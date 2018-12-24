@@ -168,7 +168,8 @@ class FlashBuilder(object):
         # - nRF51       -UICR location far from flash (address 0x10001000)
         # - LPC1768     -Different sized pages
         program_start = time()
-
+		# BHDT
+        chip_erase = False
         if progress_cb is None:
             progress_cb = _stub_progress
 

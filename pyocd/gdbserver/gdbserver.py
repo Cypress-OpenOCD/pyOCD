@@ -1148,16 +1148,18 @@ class GDBServer(threading.Thread):
             if resultMask & 0x1:
                 pass
             if (resultMask & 0x6) == 0x6:
-                if self.core == 0:
-                    self.target.reset_stop_on_reset()
-                else:
-                    self.log.debug("Ignoring reset request for core #%d", self.core)
+                # BHDT
+                #if self.core == 0:
+                self.target.reset_stop_on_reset()
+                #else:
+                #    self.log.debug("Ignoring reset request for core #%d", self.core)
             elif resultMask & 0x2:
+                # BHDT
                 # on 'reset' still do a reset halt
-                if self.core == 0:
-                    self.target.reset_stop_on_reset()
-                else:
-                    self.log.debug("Ignoring reset request for core #%d", self.core)
+                #if self.core == 0:
+                self.target.reset_stop_on_reset()
+                #else:
+                #    self.log.debug("Ignoring reset request for core #%d", self.core)
                 # self.target.reset()
             elif resultMask & 0x4:
                 self.target.halt()

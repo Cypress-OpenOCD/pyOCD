@@ -401,7 +401,11 @@ class FlashLoader(object):
             # Look up flash region.
             region = self._map.get_region_for_address(address)
             if region is None:
-                raise ValueError("no memory region defined for address 0x%08x" % address)
+            # [OSVN] Workaround for programming hexes with undefined addresses  
+                 logging.warning("no memory region defined for address 0x%08x" % address)
+                 return self 
+            #    raise ValueError("no memory region defined for address 0x%08x" % address)
+            #  [OSVN] 
             if not region.is_flash:
                 raise ValueError("memory region at address 0x%08x is not flash" % address)
         
