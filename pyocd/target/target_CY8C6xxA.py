@@ -465,5 +465,6 @@ class CortexM_CY8C6xxA(CortexM):
 
         self.set_breakpoint(entry)
         self.reset(True)
+        sleep(0.2)
         self.wait_halted()
         self.remove_breakpoint(entry)
