@@ -21,4 +21,4 @@ class DAPSettings():
 	ws_host = "localhost"
 	ws_port = 8081
 
-	limit_packets = False
+	limit_packets = True

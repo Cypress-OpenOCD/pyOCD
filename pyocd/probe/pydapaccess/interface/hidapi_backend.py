@@ -71,10 +71,16 @@ class HidApiUSB(Interface):
         boards = []
 
         for deviceInfo in devices:
-            product_name = deviceInfo['product_string']
-            if (product_name.find("CMSIS-DAP") < 0):
+            #product_name = deviceInfo['product_string']
+            product_name = deviceInfo['path']
+            if (product_name.find("KitProg3 CMSIS-DAP") < 0):
                 # Skip non cmsis-dap devices
                 continue
+
+            if (product_name.find("KitProg3 bridge") >= 0):
+                # Temporary ignores Cypress Kitprog3 Bridge
+                continue
+
 
             try:
                 dev = hid.device(vendor_id=deviceInfo['vendor_id'], product_id=deviceInfo['product_id'],
