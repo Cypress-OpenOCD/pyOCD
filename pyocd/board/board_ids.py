@@ -108,5 +108,6 @@ BOARD_ID_TO_INFO = {
     "0B14": BoardInfo(  "CY8C6xx7-WIFI-BT",     "cy8c6xx7",         "l1_cy8c6xx7.bin",      ),
     "1704": BoardInfo(  "CY8C6xxA-STAMP",       "cy8c6xxA",         "l1_cy8c6xx7.bin",      ),
     "1F0D": BoardInfo(  "CY8C6xxA-STAMP",       "cy8c6xxA",         "l1_cy8c6xx7.bin",      ),
+    "1D13": BoardInfo(  "CY8C6xxA-STAMP",       "cy8c6xxA",         "l1_cy8c6xx7.bin",      ),
     }
 
