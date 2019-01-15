@@ -68,8 +68,9 @@ def same(d1, d2):
             return False
     return True
 
-def is_erased(d):
-    return all((b == 0xff) for b in d)
+# ASHY
+def is_erased(d, errase_value = 0xFF):
+    return all((b == errase_value) for b in d)
 
 def flash_loader_test(board_id):
     with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
@@ -84,8 +85,14 @@ def flash_loader_test(board_id):
         if target_type == "ncs36510":
             # Override clock since 10MHz is too fast
             test_clock = 1000000
+
         session.probe.set_clock(test_clock)
 
+        #ASHY
+        errase_value = 0xFF
+        if board.target_type == "cy8c6xxa" or board.target_type == "cy8c6xx7":
+            errase_value = 0x00        
+        
         memory_map = board.target.get_memory_map()
         boot_region = memory_map.get_boot_memory()
         boot_start_addr = boot_region.start
@@ -133,7 +140,8 @@ def flash_loader_test(board_id):
         eraser = FlashEraser(session, FlashEraser.Mode.SECTOR)
         eraser.erase(["0x%x+0x%x" % (addr, boot_blocksize)])
         verify_data = target.read_memory_block8(addr, boot_blocksize)
-        if is_erased(verify_data):
+        #ASHY
+        if is_erased(verify_data, errase_value):
             print("TEST PASSED")
             test_pass_count += 1
         else:
@@ -146,7 +154,8 @@ def flash_loader_test(board_id):
         loader.commit()
         verify_data = target.read_memory_block8(boot_start_addr, data_length)
         verify_data2 = target.read_memory_block8(addr, boot_blocksize * 2)
-        if same(verify_data, data) and is_erased(verify_data2):
+        #ASHY
+        if same(verify_data, data) and is_erased(verify_data2, errase_value):
             print("TEST PASSED")
             test_pass_count += 1
         else:
