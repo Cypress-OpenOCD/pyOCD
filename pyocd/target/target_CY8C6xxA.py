@@ -383,8 +383,8 @@ class CY8C6xxA(CoreSightTarget):
         FlashRegion(start=0x10000000, length=0x200000, blocksize=0x200, is_boot_memory=True, algo=flash_algo_main),
         FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, algo=flash_algo_work),
         # FlashRegion(start=0x16000000, length=0x8000, blocksize=0x200, is_boot_memory=False, algo=flash_algo_sflash),
-        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, is_boot_memory=False, is_external=True, algo=flash_algo,
-                    flash_class=Flash_cy8c6xxa_external),
+        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, is_boot_memory=False, is_external=True, 
+                    is_testable=False, algo=flash_algo, flash_class=Flash_cy8c6xxa_external),
         
         RamRegion(start=0x08000000, length=0x10000)
     )
