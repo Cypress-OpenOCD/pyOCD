@@ -109,5 +109,6 @@ BOARD_ID_TO_INFO = {
     "1704": BoardInfo(  "CY8C6xxA-STAMP",       "cy8c6xxA",         "l1_cy8c6xx7.bin",      ),
     "1F0D": BoardInfo(  "CY8C6xxA-STAMP",       "cy8c6xxA",         "l1_cy8c6xx7.bin",      ),
     "1D13": BoardInfo(  "CY8C6xxA-STAMP",       "cy8c6xxA",         "l1_cy8c6xx7.bin",      ),
-    }
+    "1901": BoardInfo(  "CY8C6xxA-STAMP",       "cy8c6xxA",         "l1_cy8c6xx7.bin",      ),
+}
 
