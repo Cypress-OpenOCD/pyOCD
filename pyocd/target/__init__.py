@@ -69,6 +69,7 @@ from . import target_lpc4088qsb
 from . import target_lpc4088dm
 from . import target_RTL8195AM
 from . import target_CC3220SF
+from . import target_CY8C6xx7
 
 TARGET = {
           'cortex_m': CoreSightTarget,
@@ -131,5 +132,6 @@ TARGET = {
           'lpc4088dm': target_lpc4088dm.LPC4088dm,
           'rtl8195am': target_RTL8195AM.RTL8195AM,
           'cc3220sf': target_CC3220SF.CC3220SF,
+          'cy8c6xx7': target_CY8C6xx7.CY8C6xx7,
          }
 
