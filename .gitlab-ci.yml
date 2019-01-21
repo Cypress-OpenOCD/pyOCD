@@ -2,43 +2,40 @@ stages:
   - utest
   - ftest
 
+tags:
+  - CYPTEST-W1064-V1
+
+variables:
+# ENV_DIR: env
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
 before_script:
   - set
-  - uname -s
-  - id
+  - python -V               # Print out python version for debugging
+  - virtualenv venv  
+  - call .\venv\Scripts\activate.bat
+  - echo [INFO] Installing python modules
+  - pip install setuptools_scm
+  - pip install setuptools_scm_git_archive
+  - pip install -r dev-requirements.txt
 
-#variables:
-#  ENV_DIR: env
+cache:
+  paths:
+    - .cache/pip
+    - venv/
   
 unit_test:
   stage: utest
-  tags:
-    - CYPTEST-W1064-V1
   script:
     - cd
-    - echo [INFO] Setup python environment
-    - virtualenv env
-    - call .\env\Scripts\activate.bat
-    - echo [INFO] Installing python modules
-    - echo %APPDATA%
-    - pip install setuptools_scm
-    - pip install setuptools_scm_git_archive
-    - pip install -r dev-requirements.txt
     - echo [INFO] Running unit tests
     - pytest
-  cache:
-    paths:
-      - env
-    
+
 functional_test:
   dependencies:
     - unit_test
   stage: ftest
-  tags:
-    - CYPTEST-W1064-V1
-
   script:
-    - call .\env\Scripts\activate.bat
     - pushd test
-    - echo [INFO] Running unit tests
+    - echo [INFO] Running functional tests
     - python automated_test.py -b 190100008b131509028b131500000000000000002e127069
