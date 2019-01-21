@@ -1,5 +1,6 @@
 stages:
   - utest
+  - ftest
 
 before_script:
   - set
@@ -26,3 +27,14 @@ unit_test:
     - echo [INFO] Running unit tests
     - pytest
     
+functional_test:
+  dependencies:
+    - unit_test
+  stage: ftest
+  tags:
+    - CYPTEST-W1064-V1
+  script:
+    - call .\env\Scripts\activate.bat
+    - pushd test
+    - echo [INFO] Running unit tests
+    - python automated_test.py -b 190100008b131509028b131500000000000000002e127069
