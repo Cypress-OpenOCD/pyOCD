@@ -15,7 +15,7 @@ variables:
     - virtualenv $ENV_DIR
 
 unit_test:
-  extends: utest
+  extends: .setup_env
   tags:
     - CYPTEST-W1064-V1
   script:
