@@ -12,6 +12,7 @@ variables:
   tags:
     - CYPTEST-W1064-V1
   script:
+    - echo [INFO] Setup python environment
     - virtualenv ${ENV_DIR}
 
 unit_test:
@@ -19,6 +20,7 @@ unit_test:
   tags:
     - CYPTEST-W1064-V1
   script:
+    - cd
     - ${ENV_DIR}\Scripts\activate
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
