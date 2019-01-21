@@ -1,0 +1,27 @@
+stages:
+  - utest
+
+before_script:
+  - set
+
+variables:
+  ENV_DIR: env
+  
+.setup_env
+  stage: utest
+  tags:
+    - CYPTEST-W1064-V1
+  script:
+    - virtualenv $ENV_DIR
+
+unit_test
+  extends: utest
+  tags:
+    - CYPTEST-W1064-V1
+  script
+    - $ENV_DIR\Scripts\activate
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pytest
+    
