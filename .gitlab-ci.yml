@@ -19,7 +19,7 @@ unit_test:
   tags:
     - CYPTEST-W1064-V1
   script:
-    - $ENV_DIR\Scripts\activate
+    - %ENV_DIR%\Scripts\activate
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
