@@ -4,8 +4,8 @@ stages:
 before_script:
   - set
 
-variables:
-  ENV_DIR: env
+#variables:
+#  ENV_DIR: env
   
 unit_test:
   stage: utest
@@ -14,8 +14,8 @@ unit_test:
   script:
     - cd
     - echo [INFO] Setup python environment
-    - virtualenv ${ENV_DIR}
-    - ${ENV_DIR}\Scripts\activate
+    - virtualenv env
+    - env\Scripts\activate
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
