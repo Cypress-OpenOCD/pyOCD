@@ -26,6 +26,9 @@ unit_test:
     - pip install -r dev-requirements.txt
     - echo [INFO] Running unit tests
     - pytest
+  cache:
+    paths:
+      - env
     
 functional_test:
   dependencies:
@@ -33,6 +36,7 @@ functional_test:
   stage: ftest
   tags:
     - CYPTEST-W1064-V1
+
   script:
     - call .\env\Scripts\activate.bat
     - pushd test
