@@ -7,14 +7,14 @@ before_script:
 variables:
   ENV_DIR: env
   
-.setup_env
+.setup_env:
   stage: utest
   tags:
     - CYPTEST-W1064-V1
   script:
     - virtualenv $ENV_DIR
 
-unit_test
+unit_test:
   extends: utest
   tags:
     - CYPTEST-W1064-V1
