@@ -19,6 +19,7 @@ unit_test:
     - virtualenv env
     - call .\env\Scripts\activate.bat
     - echo [INFO] Installing python modules
+    - echo %APPDATA%
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
