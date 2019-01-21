@@ -4,6 +4,7 @@ stages:
 before_script:
   - set
   - uname -s
+  - id
 
 #variables:
 #  ENV_DIR: env
@@ -16,7 +17,8 @@ unit_test:
     - cd
     - echo [INFO] Setup python environment
     - virtualenv env
-    - ./env/Scripts/activate
+    - .\env\Scripts\activate.bat
+    - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
