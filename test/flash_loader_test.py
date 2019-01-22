@@ -29,6 +29,7 @@ sys.path.insert(0, parentdir)
 from pyocd.core.helpers import ConnectHelper
 from pyocd.probe.pydapaccess import DAPAccess
 from pyocd.utility.conversion import float32_to_u32
+from pyocd.utility.mask import same
 from pyocd.core.memory_map import MemoryType
 from pyocd.flash.loader import (FileProgrammer, FlashEraser, FlashLoader)
 from test_util import (Test, TestResult, get_session_options)
@@ -59,19 +60,6 @@ class FlashLoaderTest(Test):
         result.test = self
         return result
 
-
-def same(d1, d2):
-    if len(d1) != len(d2):
-        return False
-    for i in range(len(d1)):
-        if d1[i] != d2[i]:
-            return False
-    return True
-
-# ASHY
-def is_erased(d, errase_value = 0xFF):
-    return all((b == errase_value) for b in d)
-
 def flash_loader_test(board_id):
     with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
         board = session.board
@@ -85,14 +73,8 @@ def flash_loader_test(board_id):
         if target_type == "ncs36510":
             # Override clock since 10MHz is too fast
             test_clock = 1000000
-
         session.probe.set_clock(test_clock)
 
-        #ASHY
-        errase_value = 0xFF
-        if board.target_type == "cy8c6xxa" or board.target_type == "cy8c6xx7":
-            errase_value = 0x00        
-        
         memory_map = board.target.get_memory_map()
         boot_region = memory_map.get_boot_memory()
         boot_start_addr = boot_region.start
@@ -140,8 +122,7 @@ def flash_loader_test(board_id):
         eraser = FlashEraser(session, FlashEraser.Mode.SECTOR)
         eraser.erase(["0x%x+0x%x" % (addr, boot_blocksize)])
         verify_data = target.read_memory_block8(addr, boot_blocksize)
-        #ASHY
-        if is_erased(verify_data, errase_value):
+        if target.memory_map.get_region_for_address(addr).is_erased(verify_data):
             print("TEST PASSED")
             test_pass_count += 1
         else:
@@ -154,8 +135,7 @@ def flash_loader_test(board_id):
         loader.commit()
         verify_data = target.read_memory_block8(boot_start_addr, data_length)
         verify_data2 = target.read_memory_block8(addr, boot_blocksize * 2)
-        #ASHY
-        if same(verify_data, data) and is_erased(verify_data2, errase_value):
+        if same(verify_data, data) and target.memory_map.get_region_for_address(addr).is_erased(verify_data2):
             print("TEST PASSED")
             test_pass_count += 1
         else:
