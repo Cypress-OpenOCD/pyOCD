@@ -42,6 +42,7 @@ from flash_loader_test import FlashLoaderTest
 from gdb_test import GdbTest
 from gdb_server_json_test import GdbServerJsonTest
 from connect_test import ConnectTest
+from cy_flash_test import CyFlashTest
 
 XML_RESULTS = "test_results.xml"
 
@@ -62,6 +63,7 @@ test_list = [
              FlashTest(),
              FlashLoaderTest(),
              GdbTest(),
+             CyFlashTest(),
              ]
 
 def print_summary(test_list, result_list, test_time, output_file=None):
