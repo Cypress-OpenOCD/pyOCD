@@ -16,11 +16,12 @@
 """
 from __future__ import print_function
 
-import os, sys
+import os, sys, platform
 from time import sleep, time
 import struct
 import traceback
 import argparse
+from os.path import expanduser
 
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parentdir)
@@ -37,8 +38,12 @@ from pyocd.core.target import Target
 import logging
 
 BOARDS_IN_TEST = 4
-TEST_DATA_PATH = r"C:\pyocd_test_data"
-
+if platform.system() == "Windows":
+    TEST_DATA_PATH = r"C:\openocd_test_data\files"
+else:
+    home = expanduser("~")
+    TEST_DATA_PATH = os.path.join(home, "openocd_test_data", "files")
+    
 class CyFlashTestResult(TestResult):
     def __init__(self):
         super(CyFlashTestResult, self).__init__(None, None, None)
@@ -94,7 +99,8 @@ def flash_test(board_id):
 
     print("\n------ Test List targets ------")
     obj = ListGenerator.list_targets()
-    if {'part_number': 'CY8C6xxA', 'name': 'cy8c6xxa'} in obj['targets']:
+    if {'part_number': 'CY8C6xxA', 'name': 'cy8c6xxa'} in obj['targets'] and\
+        {'part_number': 'CY8C6xx7', 'name': 'cy8c6xx7'} in obj['targets']:
         print("TEST PASSED")
         test_pass_count += 1
     else:
