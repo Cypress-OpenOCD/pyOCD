@@ -39,4 +39,5 @@ functional_test:
   script:
     - pushd test
     - echo [INFO] Running functional tests
-    - python automated_test.py -b 190100008b131509028b131500000000000000002e127069
+    # - python automated_test.py -b 190100008b131509028b131500000000000000002e127069
+    - python automated_test.py -b 190100008b13151c028b131500000000000000002e127069
