@@ -284,33 +284,150 @@ def flash_test(board_id):
             print("TEST FAILED")
         test_count += 1
 
-        # PROGTOOLS - 35
-        # print("\n------ Test mass erase ------")
-        # hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
-        # 
-        # programmer = loader.FileProgrammer(session, chip_erase=True)
-        # print("Start program %s to main flash"% (hex_file))
-        # programmer.program(hex_file)
-        # session.target.mass_erase()
-        # 
-        # for rom_region in memory_map.get_regions_of_type(MemoryType.FLASH):
-        #     if not rom_region.is_testable:
-        #         continue
-        #     rom_start = rom_region.start
-        #     rom_size = rom_region.length
-        # 
-        #     data_read = target.read_memory_block8(rom_start, rom_size)
-        # 
-        #     if is_erased(data_read, errase_value):
-        #         print("TEST PASSED")
-        #         test_pass_count += 1
-        #     else:
-        #         print("TEST FAILED")
-        #     test_count += 1
+        print("\n------ Test Program sflash hex ------")
+        hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.hex"]))
+        sflash_ofset = 0x800
+
+        programmer = loader.FileProgrammer(session, chip_erase=True)
+        print("Start program %s to work flash"% (hex_file))
+        start = time()
+        programmer.program(hex_file)
+        stop = time()
+        diff = stop - start
+        print("Elapsed time is %.3f seconds"% (diff))
+
+        binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
+        with open(binary_file, "rb") as f:
+            data = f.read()
+        data = struct.unpack("%iB" % len(data), data)
+
+        print("Start verification")
+        for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+            if flash_region.start == 0x16000000:
+                s_flash_region = flash_region
+                break
+
+        data_flashed = target.read_memory_block8(s_flash_region.start + sflash_ofset, len(data))
+        if same(data_flashed, data):
+            print("TEST PASSED")
+            test_pass_count += 1
+        else:
+            print("TEST FAILED")
+        test_count += 1
+
+        print("\n------ Test Program sflash bin ------")
+        bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
+        sflash_ofset = 0x800
+
+        for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+            if flash_region.start == 0x16000000:
+                s_flash_region = flash_region
+                break
+
+        programmer = loader.FileProgrammer(session, chip_erase=True)
+        print("Start program %s to work flash"% (bin_file))
+        start = time()
+        programmer.program(bin_file, format ='bin', base_address =s_flash_region.start + sflash_ofset)
+        stop = time()
+        diff = stop - start
+        print("Elapsed time is %.3f seconds"% (diff))
+
+        with open(bin_file, "rb") as f:
+            data = f.read()
+        data = struct.unpack("%iB" % len(data), data)
+
+        print("Start verification")
+
+        data_flashed = target.read_memory_block8(s_flash_region.start + sflash_ofset, len(data))
+        if same(data_flashed, data):
+            print("TEST PASSED")
+            test_pass_count += 1
+        else:
+            print("TEST FAILED")
+        test_count += 1
+
+        #PROGTOOLS - 28
+        for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+            if flash_region.start == 0x18000000:
+                smif_flash_region = flash_region
+
+                print("\n------ Test Program smif hex ------")
+                hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.hex"]))
+
+                programmer = loader.FileProgrammer(session, chip_erase=True)
+                print("Start program %s to work flash"% (hex_file))
+                start = time()
+                programmer.program(hex_file)
+                stop = time()
+                diff = stop - start
+                print("Elapsed time is %.3f seconds"% (diff))
+
+                binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.bin"]))
+                with open(binary_file, "rb") as f:
+                    data = f.read()
+                data = struct.unpack("%iB" % len(data), data)
+
+                print("Start verification")
+
+                data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
+                if same(data_flashed, data):
+                    print("TEST PASSED")
+                    test_pass_count += 1
+                else:
+                    print("TEST FAILED")
+                test_count += 1
+
+        #PROGTOOLS - 28
+                print("\n------ Test Program smif bin ------")
+                bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
+
+                programmer = loader.FileProgrammer(session, chip_erase=True)
+                print("Start program %s to work flash"% (bin_file))
+                start = time()
+                programmer.program(bin_file, format ='bin', base_address =smif_flash_region.start)
+                stop = time()
+                diff = stop - start
+                print("Elapsed time is %.3f seconds"% (diff))
+
+                with open(bin_file, "rb") as f:
+                    data = f.read()
+                data = struct.unpack("%iB" % len(data), data)
+
+                print("Start verification")
+
+                data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
+                if same(data_flashed, data):
+                    print("TEST PASSED")
+                    test_pass_count += 1
+                else:
+                    print("TEST FAILED")
+                test_count += 1
+
+        print("\n------ Test mass erase ------")
+        hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
+
+        programmer = loader.FileProgrammer(session, chip_erase=True)
+        print("Start program %s to main flash"% (hex_file))
+        programmer.program(hex_file)
+        session.target.mass_erase()
+
+        for rom_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+            if not rom_region.is_testable:
+                continue
+            rom_start = rom_region.start
+            rom_size = rom_region.length
+
+            data_read = target.read_memory_block8(rom_start, rom_size)
+
+            if is_erased(data_read, errase_value):
+                print("TEST PASSED")
+                test_pass_count += 1
+            else:
+                print("TEST FAILED")
+            test_count += 1
 
         print("\n------ Erase Program BlinkFull Verify Reset Run CM4 ------")
-        #PROGTOOLS-35
-        #session.target.mass_erase()
+        session.target.mass_erase()
 
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_BlinkFull.hex"]))
 
@@ -344,8 +461,7 @@ def flash_test(board_id):
         test_count += 1
 
         print("\n------ Erase Program BlinkFull Verify Reset Run CM0 ------")
-        #PROGTOOLS-35
-        #session.target.mass_erase()
+        session.target.mass_erase()
 
         binary_file = os.path.join(parentdir, 'binaries', board.test_binary)
         with open(binary_file, "rb") as f:
@@ -373,8 +489,7 @@ def flash_test(board_id):
         test_count += 1
 
         print("\n------ Erase Program BlinkFull.elf Verify Reset Run CM4 ------")
-        #PROGTOOLS-35
-        #session.target.mass_erase()
+        session.target.mass_erase()
 
         elf_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_BlinkFull.elf"]))
 
@@ -440,43 +555,41 @@ def flash_test(board_id):
                 print("FLASH REGION FAILED. TEST EXECUTION BLOCKED.")
                 assert "FLASH REGION FAILED. TEST EXECUTION BLOCKED."
 
-            #PROGTOOLS-35
-            # print("\n------ Test Flash Erase All ------")
-            # flash.init()
-            # flash.erase_all()
-            # flash.cleanup()
-            # 
-            # data_read = target.read_memory_block8(rom_start, rom_size)
-            # 
-            # if is_erased(data_read, errase_value):
-            #     print("TEST PASSED")
-            #     test_pass_count += 1
-            # else:
-            #     print("TEST FAILED")
-            # test_count += 1
+            print("\n------ Test Flash Erase All ------")
+            flash.init(rom_region.flash.Operation.ERASE)
+            flash.erase_all()
+            flash.cleanup()
 
-            #PROGTOOLS-35
-            # print("\n------ Test Flash Erase Page ------")
-            # flash.flash_block(rom_start, data, False, False, progress_cb=print_progress())
-            # data_read = target.read_memory_block8(rom_start, size)
-            # 
-            # if same(data_read, data):
-            #     flash.init()
-            #     flash.erase_page(rom_start)
-            #     flash.cleanup()
-            #     data_read = target.read_memory_block8(rom_start, flash.min_program_length)
-            #     if is_erased(data_read, errase_value):
-            #         data_read = target.read_memory_block8(rom_start + flash.min_program_length, size - flash.min_program_length)
-            #         if same(data_read, data[flash.min_program_length:]):
-            #             print("TEST PASSED")
-            #             test_pass_count += 1
-            #         else:
-            #             print("TEST FAILED")
-            #     else:
-            #         print("TEST FAILED")
-            # else:
-            #     print("TEST FAILED")
-            # test_count += 1
+            data_read = target.read_memory_block8(rom_start, rom_size)
+
+            if is_erased(data_read, errase_value):
+                print("TEST PASSED")
+                test_pass_count += 1
+            else:
+                print("TEST FAILED")
+            test_count += 1
+
+            print("\n------ Test Flash Erase Page ------")
+            flash.flash_block(rom_start, data, False, False, progress_cb=print_progress())
+            data_read = target.read_memory_block8(rom_start, size)
+
+            if same(data_read, data):
+                flash.init(rom_region.flash.Operation.ERASE)
+                flash.erase_page(rom_start)
+                flash.cleanup()
+                data_read = target.read_memory_block8(rom_start, flash.min_program_length)
+                if is_erased(data_read, errase_value):
+                    data_read = target.read_memory_block8(rom_start + flash.min_program_length, size - flash.min_program_length)
+                    if same(data_read, data[flash.min_program_length:]):
+                        print("TEST PASSED")
+                        test_pass_count += 1
+                    else:
+                        print("TEST FAILED")
+                else:
+                    print("TEST FAILED")
+            else:
+                print("TEST FAILED")
+            test_count += 1
 
         print("\n\nTest Summary:")
         print("Pass count %i of %i tests" % (test_pass_count, test_count))
