@@ -17,6 +17,7 @@
 import logging
 from time import (time, sleep)
 
+from ..flash.flash import Flash
 from ..core import exceptions
 from ..core.coresight_target import CoreSightTarget
 from ..core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
@@ -172,6 +173,7 @@ flash_algo_sflash = {
     )
 }
 
+
 class CY8C6xx7(CoreSightTarget):
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
@@ -194,7 +196,10 @@ class CY8C6xx7(CoreSightTarget):
 
     def create_cy8c6xx7_core(self):
         core0 = CortexM_CY8C6xx7(self, self.aps[1], self.memory_map, 0)
+        core0.default_reset_type = self.ResetType.SW_SYSRESETREQ
         core1 = CortexM_CY8C6xx7(self, self.aps[2], self.memory_map, 1)
+        core1.default_reset_type = self.ResetType.SW_SYSRESETREQ
+        
         self.aps[1].core = core0
         self.aps[2].core = core1
         core0.init()
@@ -204,22 +209,24 @@ class CY8C6xx7(CoreSightTarget):
 
 
 class CortexM_CY8C6xx7(CortexM):
-
-    def reset(self, software_reset=None):
+    def reset(self, reset_type=None):
         self.notify(Notification(event=Target.EVENT_PRE_RESET, source=self))
 
-        if software_reset == None:
-            software_reset = True
-
         self._run_token += 1
-        if software_reset:
+        
+        if reset_type is Target.ResetType.HW:
+            self.session.probe.reset()
+        else:
+            if reset_type is Target.ResetType.SW_VECTRESET:
+                mask = CortexM.NVIC_AIRCR_VECTRESET
+            else:
+                mask = CortexM.NVIC_AIRCR_SYSRESETREQ
+                
             try:
-                self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
+                self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | mask)
                 self.flush()
             except exceptions.TransferError:
-                pass
-        else:
-            self.session.probe.reset()
+                self.flush()
 
         start_time = time()
         while time() - start_time < 5.0:
@@ -247,10 +254,10 @@ class CortexM_CY8C6xx7(CortexM):
 
         raise Exception("Timeout waiting for target halt")
 
-    def reset_stop_on_reset(self, software_reset=None):
-        self.halt()        
-        self.reset(software_reset)
-        sleep(0.2)
+    def reset_and_halt(self, reset_type=None):            
+        self.halt()
+        self.reset(reset_type)
+        sleep(0.5)
         self.halt()
 
         self.wait_halted()
@@ -273,7 +280,7 @@ class CortexM_CY8C6xx7(CortexM):
             return
 
         self.set_breakpoint(entry)
-        self.reset(True)
+        self.reset(self.ResetType.SW_SYSRESETREQ)
         sleep(0.2)
         self.wait_halted()
         self.remove_breakpoint(entry)
