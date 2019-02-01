@@ -1,6 +1,6 @@
 """
  mbed CMSIS-DAP debugger
- Copyright (c) 2006-2013 ARM Limited
+ Copyright (c) 2006-2019 ARM Limited
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -437,6 +437,14 @@ class CY8C6xxA(CoreSightTarget):
 
 
 class CortexM_CY8C6xxA(CortexM):
+    # VectorTableBase registers for the cores
+    VTBASE_CM0 = 0x40201120
+    VTBASE_CM4 = 0x40200200
+
+    # Main Flash addresses
+    MFLASH_START = 0x10000000
+    MFLASH_END = 0x10200000
+    
     def reset(self, reset_type=None):
         self.notify(Notification(event=Target.EVENT_PRE_RESET, source=self))
 
@@ -497,19 +505,19 @@ class CortexM_CY8C6xxA(CortexM):
         self.wait_halted()
 
         if self.core_number == 0:
-            vtbase = self.read_memory(0x40201120)  # VTBASE_CM0
+            vtbase = self.read_memory(self.VTBASE_CM0)
         elif self.core_number == 1:
-            vtbase = self.read_memory(0x40200200)  # VTBASE_CM4
+            vtbase = self.read_memory(self.VTBASE_CM4)
         else:
             raise Exception("Invalid CORE ID")
 
         vtbase &= 0xFFFFFF00
-        if vtbase < 0x10000000 or vtbase > 0x18000000:
+        if vtbase < self.MFLASH_START or vtbase > self.MFLASH_END:
             logging.info("Vector Table address invalid (0x%08X), will not halt at main()", vtbase)
             return
 
         entry = self.read_memory(vtbase + 4)
-        if entry < 0x10000000 or entry > 0x18000000:
+        if entry < self.MFLASH_START or entry > self.MFLASH_END:
             logging.info("Entry Point address invalid (0x%08X), will not halt at main()", entry)
             return
 
