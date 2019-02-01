@@ -111,15 +111,15 @@ def flash_test(board_id):
     obj = ListGenerator.list_boards()
     if {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1900', 'name': 'CY8CKIT-062-WIFI-BT'}\
         in obj['boards'] and\
-        {'binary': 'l1_cy8c6xxA.bin', 'target': 'cy8c6xxA', 'id': '1901', 'name': 'CY8CPROTO-062-4343W'}\
+        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1901', 'name': 'CY8CPROTO-062-4343W'}\
         in obj['boards'] and\
         {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1902', 'name': 'CY8CKIT-062-BLE'}\
         in obj['boards'] and\
-        {'binary': 'l1_cy8c6xxA.bin', 'target': 'cy8c6xxA', 'id': '1903', 'name': 'CY8CPROTO-062-43012'}\
+        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1903', 'name': 'CY8CPROTO-062-43012'}\
         in obj['boards'] and\
         {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1904', 'name': 'CY8CPROTO-063-BLE'}\
         in obj['boards'] and\
-        {'binary': 'l1_cy8c6xxA.bin', 'target': 'cy8c6xxA', 'id': '1905', 'name': 'CY8CKIT-062-4343W'}\
+        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1905', 'name': 'CY8CKIT-062-4343W'}\
         in obj['boards'] and\
         {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1906', 'name': 'CYW943012P6EVB-01'} in obj['boards']:
 
