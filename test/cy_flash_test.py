@@ -37,7 +37,7 @@ from pyocd.core.target import Target
 
 import logging
 
-BOARDS_IN_TEST = 4
+BOARDS_IN_TEST = 5
 if platform.system() == "Windows":
     TEST_DATA_PATH = r"C:\openocd_test_data\files"
 else:
@@ -140,7 +140,8 @@ def flash_test(board_id):
 
         if board_id[:4] == "1901":
             test_kit = "CY8CPROTO-063-4343W"
-        #elif board_id[:4] == "1902":
+        elif board_id[:4] == "1905":
+            test_kit = "CY8CPROTO-063-4343W"
         else:
             test_kit = "CY8C6347BZI-BLD53"
 
