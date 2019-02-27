@@ -61,7 +61,7 @@ confidence=
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=all
-enable=invalid-name
+enable=invalid-name,E,W
 
 ; disable=missing-docstring,
 ;         trailing-newlines,
