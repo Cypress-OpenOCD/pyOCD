@@ -24,9 +24,11 @@ import six
 from .dap_settings import DAPSettings
 from .dap_access_api import DAPAccessIntf
 from .cmsis_dap_core import CMSISDAPProtocol
-from .interface import (INTERFACE, USB_BACKEND, WS_BACKEND)
-from .cmsis_dap_core import (Command, Pin, DAP_TRANSFER_OK,
-                             DAP_TRANSFER_FAULT, DAP_TRANSFER_WAIT)
+from .interface import (INTERFACE, USB_BACKEND, USB_BACKEND_V2, WS_BACKEND)
+from .cmsis_dap_core import (Command, Pin, Capabilities, DAP_TRANSFER_OK,
+                             DAP_TRANSFER_FAULT, DAP_TRANSFER_WAIT,
+                             DAPSWOTransport, DAPSWOMode, DAPSWOControl,
+                             DAPSWOStatus)
 
 # CMSIS-DAP values
 AP_ACC = 1 << 0
@@ -36,15 +38,28 @@ WRITE = 0 << 1
 VALUE_MATCH = 1 << 4
 MATCH_MASK = 1 << 5
 
+# SWO statuses.
+class SWOStatus:
+    DISABLED = 1
+    CONFIGURED = 2
+    RUNNING = 3
+    ERROR = 4
+
 # Set to True to enable logging of packet filling logic.
 LOG_PACKET_BUILDS = False
 
 def _get_interfaces():
     """Get the connected USB devices"""
+    # Get CMSIS-DAPv2 interfaces.
     if DAPSettings.use_ws:
-        return INTERFACE[WS_BACKEND].get_all_connected_interfaces(DAPSettings.ws_host, DAPSettings.ws_port)
+        interfaces = INTERFACE[WS_BACKEND].get_all_connected_interfaces(DAPSettings.ws_host, DAPSettings.ws_port)
     else:
-        return INTERFACE[USB_BACKEND].get_all_connected_interfaces()
+        interfaces = INTERFACE[USB_BACKEND].get_all_connected_interfaces()
+    
+    # Add in CMSIS-DAPv2 interfaces.
+    interfaces += INTERFACE[USB_BACKEND_V2].get_all_connected_interfaces()
+    
+    return interfaces
 
 
 def _get_unique_id(interface):
@@ -497,6 +512,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         self._packet_size = None
         self._commands_to_read = None
         self._command_response_buf = None
+        self._swo_status = None
         self._logger = logging.getLogger(__name__)
 
     @property
@@ -538,6 +554,13 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         self._interface.set_packet_count(self._packet_count)
         self._packet_size = self._protocol.dap_info(self.ID.MAX_PACKET_SIZE)
         self._interface.set_packet_size(self._packet_size)
+        self._capabilities = self._protocol.dap_info(self.ID.CAPABILITIES)
+        self._has_swo_uart = (self._capabilities & Capabilities.SWO_UART) != 0
+        if self._has_swo_uart:
+            self._swo_buffer_size = self._protocol.dap_info(self.ID.SWO_BUFFER_SIZE)
+        else:
+            self._swo_buffer_size = 0
+        self._swo_status = SWOStatus.DISABLED
 
         self._init_deferred_buffers()
 
@@ -647,6 +670,78 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
     def disconnect(self):
         self.flush()
         self._protocol.disconnect()
+    
+    def has_swo(self):
+        return self._has_swo_uart
+    
+    def swo_configure(self, enabled, rate):
+        # Don't send any commands if the SWO commands aren't supported.
+        if not self._has_swo_uart:
+            return False
+        
+        try:
+            if enabled:
+                # Select the streaming SWO endpoint if available.
+                if self._interface.has_swo_ep:
+                    transport = DAPSWOTransport.DAP_SWO_EP
+                else:
+                    transport = DAPSWOTransport.DAP_SWO_DATA
+                
+                if self._protocol.swo_transport(transport) != 0:
+                    self._swo_disable()
+                    return False
+                if self._protocol.swo_mode(DAPSWOMode.UART) != 0:
+                    self._swo_disable()
+                    return False
+                if self._protocol.swo_baudrate(rate) == 0:
+                    self._swo_disable()
+                    return False
+                self._swo_status = SWOStatus.CONFIGURED
+            else:
+                self._swo_disable()
+                return True
+        except DAPAccessIntf.CommandError as e:
+            self._logger.debug("Exception while configuring SWO: %s", e)
+            self._swo_disable()
+            return False
+    
+    def _swo_disable(self):
+        try:
+            self._protocol.swo_mode(DAPSWOMode.OFF)
+            self._protocol.swo_transport(DAPSWOTransport.NONE)
+        except DAPAccessIntf.CommandError as e:
+            self._logger.debug("Exception while disabling SWO: %s", e)
+        finally:
+            self._swo_status = SWOStatus.DISABLED
+    
+    def swo_control(self, start):
+        # Don't send any commands if the SWO commands aren't supported.
+        if not self._has_swo_uart:
+            return False
+        
+        if start:
+            self._protocol.swo_control(DAPSWOControl.START)
+            if self._interface.has_swo_ep:
+                self._interface.start_swo()
+            self._swo_status = SWOStatus.RUNNING
+        else:
+            self._protocol.swo_control(DAPSWOControl.STOP)
+            if self._interface.has_swo_ep:
+                self._interface.stop_swo()
+            self._swo_status = SWOStatus.CONFIGURED
+        return True
+    
+    def get_swo_status(self):
+        return self._protocol.swo_status()
+    
+    def swo_read(self, count=None):
+        if self._interface.has_swo_ep:
+            return self._interface.read_swo()
+        else:
+            if count is None:
+                count = self._packet_size
+            status, count, data = self._protocol.swo_data(count)
+            return bytearray(data)
 
     def write_reg(self, reg_id, value, dap_index=0):
         assert reg_id in self.REG

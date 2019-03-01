@@ -23,6 +23,7 @@ import traceback
 import argparse
 import json
 import colorama
+import os
 
 from . import __version__
 from .core.helpers import ConnectHelper
@@ -40,9 +41,6 @@ from .tools.pyocd import PyOCDCommander
 from .flash import loader
 from .core import options
 from .utility.cmdline import split_command_line
-
-## @brief List of built-in targets, sorted by name.
-SUPPORTED_TARGETS = sorted(list(TARGET.keys()))
 
 ## @brief Default log format for all subcommands.
 LOG_FORMAT = "%(relativeCreated)07d:%(levelname)s:%(module)s:%(message)s"
@@ -72,16 +70,6 @@ ERASE_OPTIONS = {
 class InvalidArgumentError(RuntimeError):
     """! @brief Exception class raised for invalid target names."""
     pass
-
-def validate_target(value):
-    """! @brief Argparse type function to validate the supplied target device name.
-    
-    If the target name is valid, it is returned unmodified to become the --target option's
-    attribute value.
-    """
-    if value.lower() not in TARGET:
-        raise InvalidArgumentError("invalid target option '{}'".format(value))
-    return value
 
 def convert_frequency(value):
     """! @brief Applies scale suffix to frequency value string."""
@@ -136,14 +124,20 @@ class PyOCDTool(object):
         
         # Define common options for all subcommands, excluding --verbose and --quiet.
         commonOptionsNoLogging = argparse.ArgumentParser(description='common', add_help=False)
+        commonOptionsNoLogging.add_argument('-j', '--dir', metavar="PATH", dest="project_dir", default=os.getcwd(),
+            help="Set the project directory. Defaults to the directory where pyocd was run.")
         commonOptionsNoLogging.add_argument('--config', metavar="PATH",
             help="Specify YAML configuration file. Default is pyocd.yaml or pyocd.yml.")
         commonOptionsNoLogging.add_argument("--no-config", action="store_true",
             help="Do not use a configuration file.")
+        commonOptionsNoLogging.add_argument('--script', metavar="PATH",
+            help="Use the specified user script. Defaults to pyocd_user.py.")
         commonOptionsNoLogging.add_argument('-O', action='append', dest='options', metavar="OPTION=VALUE",
             help="Set named option.")
         commonOptionsNoLogging.add_argument("-da", "--daparg", dest="daparg", nargs='+',
             help="Send setting to DAPAccess layer.")
+        commonOptionsNoLogging.add_argument("--pack", metavar="PATH", action="append",
+            help="Path to a CMSIS Device Family Pack.")
         
         # Define common options for all subcommands with --verbose and --quiet.
         commonOptions = argparse.ArgumentParser(description='common', parents=[commonOptionsNoLogging], add_help=False)
@@ -158,7 +152,7 @@ class PyOCDTool(object):
             help="Choose a probe by its unique ID or a substring thereof.")
         connectOptions.add_argument("-b", "--board", dest="board_override", metavar="BOARD",
             help="Set the board type (not yet implemented).")
-        connectOptions.add_argument("-t", "--target", dest="target_override", metavar="TARGET", type=validate_target,
+        connectOptions.add_argument("-t", "--target", dest="target_override", metavar="TARGET",
             help="Set the target type.")
         connectOptions.add_argument("-f", "--frequency", dest="frequency", default=1000000, type=convert_frequency,
             help="SWD/JTAG clock frequency in Hz, with optional k/K or m/M suffix for kHz or MHz.")
@@ -335,9 +329,9 @@ class PyOCDTool(object):
         if self._args.probes:
             ConnectHelper.list_connected_probes()
         elif self._args.targets:
-            obj = ListGenerator.list_targets()
+            obj = ListGenerator.list_targets(self._args.pack)
             for info in obj['targets']:
-                print("{name}\t{part_number}".format(**info))
+                print("{name}\t{vendor}\t{part_number}".format(**info))
         elif self._args.boards:
             obj = ListGenerator.list_boards()
             for info in obj['boards']:
@@ -352,7 +346,7 @@ class PyOCDTool(object):
             obj = ListGenerator.list_probes()
             print(json.dumps(obj, indent=4))
         elif self._args.targets:
-            obj = ListGenerator.list_targets()
+            obj = ListGenerator.list_targets(self._args.pack)
             print(json.dumps(obj, indent=4))
         elif self._args.boards:
             obj = ListGenerator.list_boards()
@@ -362,8 +356,11 @@ class PyOCDTool(object):
         self._increase_logging(["pyocd.tools.loader", "pyocd", "flash", "flash_builder"])
         
         session = ConnectHelper.session_with_chosen_probe(
+                            project_dir=self._args.project_dir,
                             config_file=self._args.config,
+                            user_script=self._args.script,
                             no_config=self._args.no_config,
+                            pack=self._args.pack,
                             unique_id=self._args.unique_id,
                             target_override=self._args.target_override,
                             frequency=self._args.frequency,
@@ -384,8 +381,11 @@ class PyOCDTool(object):
         self._increase_logging(["pyocd.tools.loader", "pyocd"])
         
         session = ConnectHelper.session_with_chosen_probe(
+                            project_dir=self._args.project_dir,
                             config_file=self._args.config,
+                            user_script=self._args.script,
                             no_config=self._args.no_config,
+                            pack=self._args.pack,
                             unique_id=self._args.unique_id,
                             target_override=self._args.target_override,
                             frequency=self._args.frequency,
@@ -451,8 +451,11 @@ class PyOCDTool(object):
             
             session = ConnectHelper.session_with_chosen_probe(
                 blocking=(not self._args.no_wait),
+                project_dir=self._args.project_dir,
+                user_script=self._args.script,
                 config_file=self._args.config,
                 no_config=self._args.no_config,
+                pack=self._args.pack,
                 unique_id=self._args.unique_id,
                 target_override=self._args.target_override,
                 frequency=self._args.frequency,

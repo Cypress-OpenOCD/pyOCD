@@ -16,22 +16,31 @@
 """
 
 from ..target import TARGET
+from ..target.pack import pack_target
+from ..utility.graph import GraphNode
 import logging
 import six
 
 log = logging.getLogger('board')
 
-class Board(object):
+class Board(GraphNode):
     """
     This class associates a target and flash to create a board.
     """
     def __init__(self, session, target=None):
+        super(Board, self).__init__()
+        
         # As a last resort, default the target to 'cortex_m'.
         if target is None:
             target = 'cortex_m'
         self._session = session
         self._target_type = target.lower()
         self._test_binary = session.options.get('test_binary', None)
+        self._delegate = None
+        
+        # Create targets from provided CMSIS pack.
+        if ('pack' in session.options) and (session.options['pack'] is not None):
+            pack_target.populate_targets_from_pack(session.options['pack'])
 
         # Create Target and Flash instances.
         try:
@@ -41,11 +50,26 @@ class Board(object):
             log.error("target '%s' not recognized", self._target_type)
             six.raise_from(KeyError("target '%s' not recognized" % self._target_type), exc)
         self._inited = False
+        
+        self.add_child(self.target)
 
     ## @brief Initialize the board.
     def init(self):
+        # If we don't have a delegate set yet, see if there is a session delegate.
+        if (self.delegate is None) and (self.session.delegate is not None):
+            self.delegate = self.session.delegate
+        
+        # Delegate pre-init hook.
+        if (self.delegate is not None) and hasattr(self.delegate, 'will_connect'):
+            self.delegate.will_connect(board=self)
+        
+        # Init the target.
         self.target.init()
         self._inited = True
+        
+        # Delegate post-init hook.
+        if (self.delegate is not None) and hasattr(self.delegate, 'did_connect'):
+            self.delegate.did_connect(board=self)
 
     ## @brief Uninitialize the board.
     def uninit(self):
@@ -61,6 +85,14 @@ class Board(object):
     @property
     def session(self):
         return self._session
+    
+    @property
+    def delegate(self):
+        return self._delegate
+    
+    @delegate.setter
+    def delegate(self, the_delegate):
+        self._delegate = the_delegate
         
     @property
     def unique_id(self):

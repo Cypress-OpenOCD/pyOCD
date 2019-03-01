@@ -113,7 +113,7 @@ class FileProgrammer(object):
         
         # Check the format is one we understand.
         if format not in self._format_handlers:
-            raise ArgumentError("unknown file format '%s'", format)
+            raise ArgumentError("unknown file format '%s'" % format)
             
         self._loader = FlashLoader(self._session,
                                     progress=self._progress,
@@ -159,8 +159,15 @@ class FileProgrammer(object):
         for start, end in data_list:
             size = end - start + 1
             data = list(hexfile.tobinarray(start=start, size=size))
-            self._loader.add_data(start, data)
-    
+            # Ignore invalid addresses for HEX files only
+            # Binary files (obviously) don't contain addresses
+            # For ELF files, any metadata that's not part of the application code 
+            # will be held in a section that doesn't have the SHF_WRITE flag set
+            try:
+                self._loader.add_data(start, data)
+            except ValueError as e:
+                logging.warning("Failed to add data chunk: %s", e)
+
     # ELF format
     def _program_elf(self, file_obj, **kwargs):
         elf = ELFBinaryFile(file_obj, self._session.target.memory_map)
@@ -283,7 +290,7 @@ class FlashEraser(object):
                 page_info = flash.get_page_info(page_addr)
                 if not page_info:
                     # Should not fail to get page info within a flash region.
-                    raise RuntimeError("sector address 0x%08x within flash region '%s' is invalid", page_addr, region.name)
+                    raise RuntimeError("sector address 0x%08x within flash region '%s' is invalid" % (page_addr, region.name))
                 
                 # Align first page address.
                 delta = page_addr % page_info.size

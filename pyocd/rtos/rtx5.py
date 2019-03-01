@@ -15,7 +15,7 @@
  limitations under the License.
 """
 from .provider import (TargetThread, ThreadProvider)
-from .common import (read_c_string, HandlerModeThread)
+from .common import (read_c_string, HandlerModeThread, EXC_RETURN_EXT_FRAME_MASK)
 from ..core import exceptions
 from ..core.target import Target
 from ..debug.context import DebugContext
@@ -173,7 +173,7 @@ class RTXThreadContext(DebugContext):
                     exceptionLR = self._thread.get_stack_frame()
 
                 # Check bit 4 of the exception LR to determine if FPU registers were stacked.
-                if (exceptionLR & (1 << 4)) == 0:
+                if (exceptionLR & EXC_RETURN_EXT_FRAME_MASK) == 0:
                     table = self.FPU_REGISTER_OFFSETS
                     hwStacked = 0x68
                     swStacked = 0x60
@@ -402,7 +402,15 @@ class RTX5ThreadProvider(ThreadProvider):
 
     @property
     def is_enabled(self):
-        return self.get_is_active()
+        if self._os_rtx_info is None:
+            return False
+        try:
+            # If we're in Thread mode on the main stack, can't be active, even
+            # if kernel state says we are (eg post reset)
+            return self.get_kernel_state() != 0 and not self._target.in_thread_mode_on_main_stack()
+        except exceptions.TransferError as exc:
+            log.debug("Transfer error checking if enabled: %s", exc)
+            return False
 
     @property
     def current_thread(self):
@@ -436,13 +444,5 @@ class RTX5ThreadProvider(ThreadProvider):
         self.update_threads()
         return self._current_id
 
-    def get_is_active(self):
-        if self._os_rtx_info is None:
-            return False
-        try:
-            state = self._target_context.read8(self._os_rtx_info + RTX5ThreadProvider.KERNEL_STATE_OFFSET)
-        except exceptions.TransferError as exc:
-            log.debug("Transfer error reading kernel state: %s", exc)
-            return False
-        else:
-            return state != 0
+    def get_kernel_state(self):
+        return self._target_context.read8(self._os_rtx_info + RTX5ThreadProvider.KERNEL_STATE_OFFSET)

@@ -31,7 +31,11 @@ The API and tools provide these features:
 -  load binary, hex, or ELF files into flash
 -  reset control
 -  access CoreSight DP and APs
+-  SWO and SWV
 -  and more!
+
+Configuration and customization is supported through [config files](docs/configuration.md) and
+[user scripts](docs/user_scripts.md).
 
 
 Requirements
@@ -41,8 +45,8 @@ Requirements
 - macOS, Linux, or Windows 7 or newer
 - Microcontroller with an Arm Cortex-M CPU
 - Supported debug probe
-  - [CMSIS-DAP](http://www.keil.com/pack/doc/CMSIS/DAP/html/index.html), such as an on-board debug
-    probe using [DAPLink](https://os.mbed.com/handbook/DAPLink) firmware.
+  - [CMSIS-DAP](http://www.keil.com/pack/doc/CMSIS/DAP/html/index.html) v1 (HID) and v2 (WinUSB),
+    such as an on-board debug probe using [DAPLink](https://os.mbed.com/handbook/DAPLink) firmware.
   - STLinkV2, either on-board or the standalone version.
 
 
@@ -51,15 +55,14 @@ Status
 
 PyOCD is functionally reliable and fully useable.
 
-The API is considered unstable because we are planning some breaking changes to bring the naming
-convention into compliance with PEP8 prior to releasing version 1.0. We also plan to merge the three
-command line tools into a single tool.
+The Python API is considered unstable as we are restructuring and cleaning it up prior to releasing
+version 1.0.
 
 
 Documentation
 -------------
 
-The pyOCD documentation is located [in the docs directory](docs/).
+The pyOCD documentation is located in [the docs directory](docs/).
 
 
 Installing
@@ -122,7 +125,7 @@ folder in the pyOCD repository. Just copy this file into `/etc/udev/rules.d` to 
 to both [DAPLink](https://os.mbed.com/handbook/DAPLink)-based debug probes as well as STLinkV2 and
 STLinkV3.
 
-If you use different, but compatible, debug probe, you can check the IDs with ``dmesg`` command.
+If you use different, but compatible, debug probe, you can check the IDs with the ``dmesg`` command.
 
    -  Run ``dmesg``
    -  Plug in your board
@@ -171,7 +174,7 @@ Eclipse using the following software update server addresses:
 - GNU MCU Eclipse: http://gnu-mcu-eclipse.sourceforge.net/updates
 - Embedded System Register Viewer: http://embsysregview.sourceforge.net/update
 
-In Eclipse, select the "Help -> Install New Software…" menu item. Then either click the "Add…"
+In Eclipse, select the "Help -> Install New Software..." menu item. Then either click the "Add..."
 button and fill in the name and URL from above (once for each site), or simply copy the URL into the
 field where it says "type or select a site". Then you can select the software to install and click
 Next to start the process.
@@ -180,7 +183,7 @@ Next to start the process.
 Development setup
 -----------------
 
-Please see the [Developers' Guide](docs/DEVELOPERS_GUIDE.md) for instructions on how to set up a
+Please see the [Developers' Guide](docs/developers_guide.md) for instructions on how to set up a
 development environment for pyOCD.
 
 

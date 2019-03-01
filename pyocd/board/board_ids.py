@@ -61,10 +61,14 @@ BOARD_ID_TO_INFO = {
     "0324": BoardInfo(  "USB-KW40Z",            "kw40z4",           "l1_kl25z.bin"          ),
     "0400": BoardInfo(  "MAXWSNENV",            "max32600",         "l1_maxwsnenv.bin",     ),
     "0405": BoardInfo(  "MAX32600MBED",         "max32600",         "l1_max32600mbed.bin",  ),
+    "0415": BoardInfo(  "MAX32625MBED",         "max32625",         "max32625mbed.bin",     ),
+    "0416": BoardInfo(  "MAX32625PICO",         "max32625",         "max32625pico.bin",     ),
+    "0418": BoardInfo(  "MAX32620FTHR",         "max32620",         "max32620fthr.bin",     ),
     "0451": BoardInfo(  "MTB MXChip EMW3166",   "stm32f412xg",      "mtb_mxchip_emw3166.bin",),
     "0459": BoardInfo(  "MTB Advantech WISE-1530", "stm32f412xg",   "mtb_wise-1530.bin",    ),
     "0462": BoardInfo(  "MTB USI WM-BN-BM-22",  "stm32f412xg",      "mtb_usi_wm-bn-bm-22.bin",),
     "0764": BoardInfo(  "ST DISCO-L475VG-IOT01A", "stm32l475xg",    "stm32l475vg_iot01a.bin",),
+    "0796": BoardInfo(  "ST NUCLEO-F429ZI",     "stm32f429xi",      "nucleo_f429zi.bin",    ),
     "0824": BoardInfo(  "LPCXpresso824-MAX",    "lpc824",           "l1_lpc824.bin",        ),
     "0826": BoardInfo(  "ST NUCLEO-F412ZG",     "stm32f412xg",      "nucleo_f412zg.bin",    ),
     "1010": BoardInfo(  "mbed NXP LPC1768",     "lpc1768",          "l1_lpc1768.bin",       ),
@@ -112,4 +116,3 @@ BOARD_ID_TO_INFO = {
     "C004": BoardInfo(  "tinyK20",              "k20d50m",          "l1_k20d50m.bin",       ),
     "C006": BoardInfo(  "VBLUno51",             "nrf51",            "l1_nrf51.bin",         ),
 }
-

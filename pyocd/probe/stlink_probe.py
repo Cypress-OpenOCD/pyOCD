@@ -1,5 +1,5 @@
 # pyOCD debugger
-# Copyright (c) 2018 Arm Limited
+# Copyright (c) 2018-2019 Arm Limited
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,8 +21,8 @@ from .stlink import (STLinkException, usb, stlink)
 from ..utility import conversion
 import six
 
-## @brief Wraps an STLink as a DebugProbe.
 class StlinkProbe(DebugProbe):
+    """! @brief Wraps an STLink as a DebugProbe."""
         
     APSEL = 0xff000000
     APSEL_SHIFT = 24
@@ -99,7 +99,7 @@ class StlinkProbe(DebugProbe):
     #          Target control functions
     # ------------------------------------------- #
     def connect(self, protocol=None):
-        """Initialize DAP IO pins for JTAG or SWD"""
+        """! @brief Initialize DAP IO pins for JTAG or SWD"""
         try:
             self._link.enter_debug(stlink.STLink.Protocol.SWD)
             self._is_connected = True
@@ -108,11 +108,11 @@ class StlinkProbe(DebugProbe):
 
     # TODO remove
     def swj_sequence(self):
-        """Send sequence to activate JTAG or SWD on the target"""
+        """! @brief Send sequence to activate JTAG or SWD on the target"""
         pass
 
     def disconnect(self):
-        """Deinitialize the DAP I/O pins"""
+        """! @brief Deinitialize the DAP I/O pins"""
         try:
             # TODO Close the APs. When this is attempted, we get an undocumented 0x1d error. Doesn't
             #      seem to be necessary, anyway.
@@ -124,7 +124,7 @@ class StlinkProbe(DebugProbe):
             six.raise_from(self._convert_exception(exc), exc)
 
     def set_clock(self, frequency):
-        """Set the frequency for JTAG and SWD in Hz
+        """! @brief Set the frequency for JTAG and SWD in Hz
 
         This function is safe to call before connect is called.
         """
@@ -134,14 +134,14 @@ class StlinkProbe(DebugProbe):
             six.raise_from(self._convert_exception(exc), exc)
 
     def reset(self):
-        """Reset the target"""
+        """! @brief Reset the target"""
         try:
             self._link.target_reset()
         except STLinkException as exc:
             six.raise_from(self._convert_exception(exc), exc)
 
     def assert_reset(self, asserted):
-        """Assert or de-assert target reset line"""
+        """! @brief Assert or de-assert target reset line"""
         try:
             self._link.drive_nreset(asserted)
             self._nreset_state = asserted
@@ -149,11 +149,11 @@ class StlinkProbe(DebugProbe):
             six.raise_from(self._convert_exception(exc), exc)
     
     def is_reset_asserted(self):
-        """Returns True if the target reset line is asserted or False if de-asserted"""
+        """! @brief Returns True if the target reset line is asserted or False if de-asserted"""
         return self._nreset_state
 
     def flush(self):
-        """Write out all unsent commands"""
+        """! @brief Write out all unsent commands"""
         pass
 
     # ------------------------------------------- #
@@ -222,43 +222,93 @@ class StlinkProbe(DebugProbe):
         else:
             return exc
 
-## @brief Concrete memory interface for a single AP.
+    def has_swo(self):
+        """! @brief Returns bool indicating whether the link supports SWO."""
+        return True
+
+    def swo_start(self, baudrate):
+        """! @brief Start receiving SWO data at the given baudrate."""
+        try:
+            self._link.swo_start(baudrate)
+        except STLinkException as exc:
+            six.raise_from(self._convert_exception(exc), exc)
+
+    def swo_stop(self):
+        """! @brief Stop receiving SWO data."""
+        try:
+            self._link.swo_stop()
+        except STLinkException as exc:
+            six.raise_from(self._convert_exception(exc), exc)
+
+    def swo_read(self):
+        """! @brief Read as much buffered SWO data from the target as possible.
+        
+        @eturn Bytearray of the received data.
+        """
+        try:
+            return self._link.swo_read()
+        except STLinkException as exc:
+            six.raise_from(self._convert_exception(exc), exc)
+
 class STLinkMemoryInterface(MemoryInterface):
+    """! @brief Concrete memory interface for a single AP."""
+    
     def __init__(self, link, apsel):
         self._link = link
         self._apsel = apsel
 
-    ## @brief Write a single memory location.
-    #
-    # By default the transfer size is a word.
     def write_memory(self, addr, data, transfer_size=32):
-        assert transfer_size in (8, 16, 32)
-        if transfer_size == 32:
-            self._link.write_mem32(addr, conversion.u32le_list_to_byte_list([data]), self._apsel)
-        elif transfer_size == 16:
-            self._link.write_mem16(addr, conversion.u16le_list_to_byte_list([data]), self._apsel)
-        elif transfer_size == 8:
-            self._link.write_mem8(addr, [data], self._apsel)
+        """! @brief Write a single memory location.
         
-    ## @brief Read a memory location.
-    #
-    # By default, a word will be read.
-    def read_memory(self, addr, transfer_size=32, now=True):
+        By default the transfer size is a word.
+        """
         assert transfer_size in (8, 16, 32)
-        if transfer_size == 32:
-            result = conversion.byte_list_to_u32le_list(self._link.read_mem32(addr, 4, self._apsel))[0]
-        elif transfer_size == 16:
-            result = conversion.byte_list_to_u16le_list(self._link.read_mem16(addr, 2, self._apsel))[0]
-        elif transfer_size == 8:
-            result = self._link.read_mem8(addr, 1, self._apsel)[0]
+        try:
+            if transfer_size == 32:
+                self._link.write_mem32(addr, conversion.u32le_list_to_byte_list([data]), self._apsel)
+            elif transfer_size == 16:
+                self._link.write_mem16(addr, conversion.u16le_list_to_byte_list([data]), self._apsel)
+            elif transfer_size == 8:
+                self._link.write_mem8(addr, [data], self._apsel)
+        except STLinkException as exc:
+            six.raise_from(self._convert_exception(exc), exc)
+        
+    def read_memory(self, addr, transfer_size=32, now=True):
+        """! @brief Read a memory location.
+        
+        By default, a word will be read.
+        """
+        assert transfer_size in (8, 16, 32)
+        try:
+            if transfer_size == 32:
+                result = conversion.byte_list_to_u32le_list(self._link.read_mem32(addr, 4, self._apsel))[0]
+            elif transfer_size == 16:
+                result = conversion.byte_list_to_u16le_list(self._link.read_mem16(addr, 2, self._apsel))[0]
+            elif transfer_size == 8:
+                result = self._link.read_mem8(addr, 1, self._apsel)[0]
+        except STLinkException as exc:
+            six.raise_from(self._convert_exception(exc), exc)
         
         def read_callback():
             return result
         return result if now else read_callback
 
     def write_memory_block32(self, addr, data):
-        self._link.write_mem32(addr, conversion.u32le_list_to_byte_list(data), self._apsel)
+        try:
+            self._link.write_mem32(addr, conversion.u32le_list_to_byte_list(data), self._apsel)
+        except STLinkException as exc:
+            six.raise_from(self._convert_exception(exc), exc)
 
     def read_memory_block32(self, addr, size):
-        return conversion.byte_list_to_u32le_list(self._link.read_mem32(addr, size * 4, self._apsel))
+        try:
+            return conversion.byte_list_to_u32le_list(self._link.read_mem32(addr, size * 4, self._apsel))
+        except STLinkException as exc:
+            six.raise_from(self._convert_exception(exc), exc)
+  
+    @staticmethod
+    def _convert_exception(exc):
+        if isinstance(exc, STLinkException):
+            return exceptions.ProbeError(str(exc))
+        else:
+            return exc
 

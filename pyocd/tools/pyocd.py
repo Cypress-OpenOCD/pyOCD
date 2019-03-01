@@ -610,8 +610,11 @@ class PyOCDCommander(object):
         # Connect to board.
         self.session = ConnectHelper.session_with_chosen_probe(
                         blocking=(not self.args.no_wait),
+                        project_dir=self.args.project_dir,
                         config_file=self.args.config,
+                        user_script=self.args.script,
                         no_config=self.args.no_config,
+                        pack=self.args.pack,
                         unique_id=self.args.unique_id,
                         target_override=self.args.target_override,
                         init_board=False,
@@ -895,10 +898,10 @@ class PyOCDCommander(object):
             # Look up flash region.
             region = self.session.target.memory_map.get_region_for_address(addr)
             if not region:
-                print("address 0x%08x is not within a memory region", pagaddre_addr)
+                print("address 0x%08x is not within a memory region" % addr)
                 return 1
             if not region.is_flash:
-                print("address 0x%08x is not in flash", addr)
+                print("address 0x%08x is not in flash" % addr)
                 return 1
             assert region.flash is not None
             
@@ -924,10 +927,10 @@ class PyOCDCommander(object):
             # Look up the flash region so we can get the page size.
             region = self.session.target.memory_map.get_region_for_address(addr)
             if not region:
-                print("address 0x%08x is not within a memory region", addr)
+                print("address 0x%08x is not within a memory region" % addr)
                 break
             if not region.is_flash:
-                print("address 0x%08x is not in flash", addr)
+                print("address 0x%08x is not in flash" % addr)
                 break
             
             # Erase this page.
@@ -1460,9 +1463,10 @@ Prefix line with ! to execute a shell command.""")
                 print()
 
     def _dump_peripheral_register(self, periph, reg, show_fields):
+        size = reg.size or 32
         addr = periph.base_address + reg.address_offset
-        value = self.target.read_memory(addr, reg.size)
-        value_str = format_hex_width(value, reg.size)
+        value = self.target.read_memory(addr, size)
+        value_str = format_hex_width(value, size)
         print("%s.%s @ %08x = %s" % (periph.name, reg.name, addr, value_str))
 
         if show_fields:
@@ -1524,8 +1528,13 @@ class PyOCDTool(object):
 
         parser = argparse.ArgumentParser(description='Target inspection utility', epilog=epi)
         parser.add_argument('--version', action='version', version=__version__)
+        parser.add_argument('-j', '--dir', metavar="PATH", dest="project_dir", default=os.getcwd(),
+            help="Set the project directory. Defaults to the directory where pyocd was run.")
         parser.add_argument('--config', metavar="PATH", default=None, help="Use a YAML config file.")
         parser.add_argument("--no-config", action="store_true", help="Do not use a configuration file.")
+        parser.add_argument('--script', metavar="PATH",
+            help="Use the specified user script. Defaults to pyocd_user.py.")
+        parser.add_argument("--pack", metavar="PATH", help="Path to a CMSIS Device Family Pack")
         parser.add_argument("-H", "--halt", action="store_true", help="Halt core upon connect.")
         parser.add_argument("-N", "--no-init", action="store_true", help="Do not init debug system.")
         parser.add_argument('-k', "--clock", metavar='KHZ', default=(DEFAULT_CLOCK_FREQ_HZ // 1000), type=int, help="Set SWD speed in kHz. (Default 1 MHz.)")

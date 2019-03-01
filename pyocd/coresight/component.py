@@ -1,5 +1,5 @@
 # pyOCD debugger
-# Copyright (c) 2018 Arm Limited
+# Copyright (c) 2018-2019 Arm Limited
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from ..utility.graph import GraphNode
 
-log = logging.getLogger("component")
+class CoreSightComponent(GraphNode):
+    """! @brief CoreSight component base class."""
+    
+    @classmethod
+    def factory(cls, ap, cmpid, address):
+        """! @brief Common CoreSightComponent factory."""
+        cmp = cls(ap, cmpid, address)
+        if ap.core:
+            ap.core.add_child(cmp)
+        return cmp
 
-## @brief CoreSight component base class.
-#
-# x
-class CoreSightComponent(object):
-    ## @brief Constructor.
-    #
     def __init__(self, ap, cmpid=None, addr=None):
+        """! @brief Constructor."""
+        super(CoreSightComponent, self).__init__()
         self._ap = ap
         self._cmpid = cmpid
         self._address = addr or (cmpid.address if cmpid else None)
