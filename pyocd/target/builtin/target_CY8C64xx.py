@@ -24,7 +24,9 @@ from ...core.target import Target
 from ...coresight.cortex_m import CortexM
 from ...utility.notification import Notification
 from ...utility.timeout import Timeout
-
+import logging
+from CY8C6xx7_MAIN import flash_algo as flash_algo_main
+from CY8C6xx7_WORK import flash_algo as flash_algo_work
 
 class cy8c64xx(CoreSightTarget):
     VENDOR = "Cypress"
@@ -32,10 +34,10 @@ class cy8c64xx(CoreSightTarget):
 
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
-        FlashRegion(start=0x10000000, length=0xa0000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
-                    algo=flash_algo_main, flash_class=Flash_CY8C6xx7_Main),
+        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
+                    algo=flash_algo_main),
         FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
-                    algo=flash_algo_work, flash_class=Flash_CY8C6xx7_Work),
+                    algo=flash_algo_work),
 
         RamRegion(start=0x08000000, length=0x10000)
     )
@@ -51,16 +53,12 @@ class cy8c64xx(CoreSightTarget):
         return seq
 
     def find_aps(self):
-        assert self.AP_NUM is not None
-
         if self.dp.valid_aps is not None:
             return
 
         self.dp.valid_aps = (self.AP_NUM,)
 
     def create_cy8c6xx7_core(self):
-        assert self.AP_NUM is not None
-
         core = CortexM_CY8C6xx7(self, self.aps[self.AP_NUM], self.memory_map, 0)
         core.default_reset_type = self.ResetType.SW_SYSRESETREQ
         self.aps[self.AP_NUM].core = core
@@ -139,29 +137,49 @@ class CortexM_CY8C6xx7(CortexM):
                     self.flush()
                 except exceptions.TransferError:
                     self.flush()
-                    sleep(0.1)
                     pass
 
                 break
         pass
 
     def reset_and_halt(self, reset_type=None):
-        self.halt()
-        self.wait_halted()
+        logging.info("Acquiring target...")
+        
+        self.halt()   
         self.reset(self.ResetType.SW_SYSRESETREQ)
         self.reinit_dap()
         self.write32(0x4023004C, 0)
         self.write32(0x40260100, 0x80000000)
         self.flush()
-        
-        with Timeout(15.0) as t_o:
+
+        with Timeout(5.0) as t_o:
             while t_o.check():
                 if self.read32(0x4023004C) == 0x12344321:
                     break
 
         if not t_o.check():
-            raise Exception("Failed to acquire the target!")
+            logging.warning("Failed to acquire the target (listen window not implemented?)")
 
+        if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
+            logging.warning("CM4 is sleeping, trying to wake it up...")
+            self.write32(0x40210080, 0x05fa0003)
+            
         self.halt()
         self.wait_halted()
+        self.write_core_register('xpsr', CortexM.XPSR_THUMB)
+
+        logging.info("Device acquired successfully")
         pass
+    
+    # def resume(self):
+    #     if self.get_state() != Target.TARGET_HALTED:
+    #         logging.debug('cannot resume: target not halted')
+    #         return
+    # 
+    #     self.notify(Notification(event=Target.EVENT_PRE_RUN, source=self, data=Target.RUN_TYPE_RESUME))
+    #     self._run_token += 1
+    #     self.clear_debug_cause_bits()
+    #     self.write32(0x40260100, 0x00000000)
+    #     self.write_memory(CortexM.DHCSR, CortexM.DBGKEY | CortexM.C_DEBUGEN)
+    #     self.flush()
+    #     self.notify(Notification(event=Target.EVENT_POST_RUN, source=self, data=Target.RUN_TYPE_RESUME))
