@@ -16,7 +16,6 @@
 """
 from time import (sleep)
 
-from target_CY8C6xx7 import flash_algo_main, flash_algo_work, Flash_CY8C6xx7_Main, Flash_CY8C6xx7_Work
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
