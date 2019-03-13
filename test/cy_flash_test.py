@@ -98,9 +98,9 @@ def flash_test(board_id):
     test_count += 1
 
     print("\n------ Test List targets ------")
-    obj = ListGenerator.list_targets()
-    if {'part_number': 'CY8C6xxA', 'name': 'cy8c6xxa'} in obj['targets'] and\
-        {'part_number': 'CY8C6xx7', 'name': 'cy8c6xx7'} in obj['targets']:
+    obj = ListGenerator.list_targets(None)
+    if {'name': 'cy8c6xxa', 'vendor': 'Cypress', 'part_families': [], 'part_number': 'CY8C6xxA'} in obj['targets'] and \
+        {'name': 'cy8c6xx7', 'vendor': 'Cypress', 'part_families': [], 'part_number': 'CY8C6xx7'} in obj['targets']:
         print("TEST PASSED")
         test_pass_count += 1
     else:
@@ -121,7 +121,10 @@ def flash_test(board_id):
         in obj['boards'] and\
         {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1905', 'name': 'CY8CKIT-062-4343W'}\
         in obj['boards'] and\
-        {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1906', 'name': 'CYW943012P6EVB-01'} in obj['boards']:
+        {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1906', 'name': 'CYW943012P6EVB-01'} \
+        in obj['boards'] and \
+        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1909', 'name': 'CY8CPROTO-062S2-43012'}\
+        in obj['boards']:
 
         print("TEST PASSED")
         test_pass_count += 1
@@ -141,6 +144,8 @@ def flash_test(board_id):
         if board_id[:4] == "1901":
             test_kit = "CY8CPROTO-063-4343W"
         elif board_id[:4] == "1905":
+            test_kit = "CY8CPROTO-063-4343W"
+        elif board_id[:4] == "1909":
             test_kit = "CY8CPROTO-063-4343W"
         else:
             test_kit = "CY8C6347BZI-BLD53"
