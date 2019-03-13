@@ -14,8 +14,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import logging
 from time import (sleep)
 
+from .CY8C6xx7_MAIN import flash_algo as flash_algo_main
+from .CY8C6xx7_WORK import flash_algo as flash_algo_work
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
@@ -23,9 +26,7 @@ from ...core.target import Target
 from ...coresight.cortex_m import CortexM
 from ...utility.notification import Notification
 from ...utility.timeout import Timeout
-import logging
-from CY8C6xx7_MAIN import flash_algo as flash_algo_main
-from CY8C6xx7_WORK import flash_algo as flash_algo_work
+
 
 class cy8c64xx(CoreSightTarget):
     VENDOR = "Cypress"
@@ -143,8 +144,8 @@ class CortexM_CY8C6xx7(CortexM):
 
     def reset_and_halt(self, reset_type=None):
         logging.info("Acquiring target...")
-        
-        self.halt()   
+
+        self.halt()
         self.reset(self.ResetType.SW_SYSRESETREQ)
         self.reinit_dap()
         self.write32(0x4023004C, 0)
@@ -162,14 +163,14 @@ class CortexM_CY8C6xx7(CortexM):
         if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
             logging.warning("CM4 is sleeping, trying to wake it up...")
             self.write32(0x40210080, 0x05fa0003)
-            
+
         self.halt()
         self.wait_halted()
         self.write_core_register('xpsr', CortexM.XPSR_THUMB)
 
         logging.info("Device acquired successfully")
         pass
-    
+
     # def resume(self):
     #     if self.get_state() != Target.TARGET_HALTED:
     #         logging.debug('cannot resume: target not halted')
