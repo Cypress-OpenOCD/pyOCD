@@ -66,6 +66,8 @@ frequency: 8000000 # Set 8 MHz SWD default for all probes
 
 ## Options list
 
+- `allow_no_cores`: (bool) Prevents raising an error if no core were found after CoreSight discovery. Default is False.
+
 - `auto_unlock`: (bool) If the target is locked, it will by default be automatically mass erased in
     order to gain debug access. Set this option to False to disable auto unlock. Default is True.
 
@@ -90,6 +92,9 @@ frequency: 8000000 # Set 8 MHz SWD default for all probes
 - `hide_programming_progress`: (bool) Disables flash programming progress bar when True. Default is
     False.
 
+- `keep_unwritten`: (bool) Whether to load existing flash content for ranges of sectors that will
+    be erased but not written with new data. Default is True.
+
 - `no_config`: (bool) Do not use default config file.
 
 - `pack`: (str or list of str) Path or list of paths to CMSIS Device Family Packs. Devices defined
@@ -102,6 +107,10 @@ frequency: 8000000 # Set 8 MHz SWD default for all probes
     'sw_vectreset', 'sw_emulated'). The default is 'sw'.
 
 - `resume_on_disconnect`: (bool) Whether to resume a halted target when disconnecting. Default is True.
+
+- `smart_flash`: (bool) If set to True, the flash loader will attempt to not program pages whose
+    contents are not going to change by scanning target flash memory. A value of False will force
+    all pages to be erased and programmed. Default is True.
 
 - `target_override`: (str) Target type name to use instead of default board target or default `cortex_m`.
 

@@ -16,8 +16,9 @@
 
 from .target import Target
 from .memory_map import MemoryType
+from . import exceptions
 from ..flash.loader import FlashEraser
-from ..coresight import (dap, cortex_m, rom_table)
+from ..coresight import (dap, cortex_m, cortex_m_v8m, rom_table)
 from ..debug.svd import (SVDFile, SVDLoader)
 from ..debug.context import DebugContext
 from ..debug.cache import CachingDebugContext
@@ -68,9 +69,9 @@ class CoreSightTarget(Target, GraphNode):
     
     @selected_core.setter
     def selected_core(self, core_number):
-        if num not in self.cores:
-            raise ValueError("invalid core number")
-        logging.debug("selected core #%d" % num)
+        if core_number not in self.cores:
+            raise ValueError("invalid core number %d" % core_number)
+        logging.debug("selected core #%d" % core_number)
         self._selected_core = core_number
 
     @property
@@ -134,6 +135,7 @@ class CoreSightTarget(Target, GraphNode):
             ('init_ap_roms',        self.dp.init_ap_roms),
             ('create_cores',        self.create_cores),
             ('create_components',   self.create_components),
+            ('check_for_cores',     self.check_for_cores),
             ('notify',              lambda : self.notify(Notification(event=Target.EVENT_POST_CONNECT, source=self)))
             )
         
@@ -202,15 +204,27 @@ class CoreSightTarget(Target, GraphNode):
 
     def create_cores(self):
         self._new_core_num = 0
-        self._apply_to_all_components(self._create_component, filter=lambda c: c.factory == cortex_m.CortexM.factory)
+        self._apply_to_all_components(self._create_component,
+            filter=lambda c: c.factory in (cortex_m.CortexM.factory, cortex_m_v8m.CortexM_v8M.factory))
 
     def create_components(self):
-        self._apply_to_all_components(self._create_component, filter=lambda c: c.factory is not None and c.factory != cortex_m.CortexM.factory)
+        self._apply_to_all_components(self._create_component,
+            filter=lambda c: c.factory is not None
+                and c.factory not in (cortex_m.CortexM.factory, cortex_m_v8m.CortexM_v8M.factory))
     
     def _apply_to_all_components(self, action, filter=None):
         # Iterate over every top-level ROM table.
         for ap in [x for x in self.dp.aps.values() if x.has_rom_table]:
             ap.rom_table.for_each(action, filter)
+
+    def check_for_cores(self):
+        """! @brief Init task: verify that at least one core was discovered."""
+        if not len(self.cores):
+            # Allow the user to override the exception to enable uses like chip bringup.
+            if self.session.options.get('allow_no_cores', False):
+                logging.error("No cores were discovered!")
+            else:
+                raise exceptions.Error("No cores were discovered!")
 
     def disconnect(self, resume=True):
         self.notify(Notification(event=Target.EVENT_PRE_DISCONNECT, source=self))

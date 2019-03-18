@@ -28,7 +28,10 @@ sys.path.insert(0, parentdir)
 from pyocd.core.helpers import ConnectHelper
 from pyocd.probe.pydapaccess import DAPAccess
 from pyocd.core.memory_map import MemoryType
+from pyocd.utility import conversion
 from test_util import (Test, TestResult, get_session_options, get_target_test_params)
+
+_1MB = (1 * 1024 * 1024)
 
 class SpeedTestResult(TestResult):
     def __init__(self):
@@ -85,10 +88,12 @@ def speed_test(board_id):
         ram_region = memory_map.get_first_region_of_type(MemoryType.RAM)
         rom_region = memory_map.get_boot_memory()
 
+        # Limit region sizes used for performance testing to 1 MB. We don't really need to
+        # be reading all 32 MB of a QSPI!
         ram_start = ram_region.start
-        ram_size = ram_region.length
+        ram_size = min(ram_region.length, _1MB)
         rom_start = rom_region.start
-        rom_size = rom_region.length
+        rom_size = min(rom_region.length, _1MB)
 
         target = board.target
 
@@ -99,15 +104,18 @@ def speed_test(board_id):
         test_params = get_target_test_params(session)
         session.probe.set_clock(test_params['test_clock'])
         
-        test_config = "uncached"
+        test_config = "uncached 8-bit"
 
-        def test_ram(record_speed=False):
+        def test_ram(record_speed=False, width=8):
             print("\n\n------ TEST RAM READ / WRITE SPEED [%s] ------" % test_config)
             test_addr = ram_start
             test_size = ram_size
             data = [randrange(1, 50) for x in range(test_size)]
             start = time()
-            target.write_memory_block8(test_addr, data)
+            if width == 8:
+                target.write_memory_block8(test_addr, data)
+            elif width == 32:
+                target.write_memory_block32(test_addr, conversion.byte_list_to_u32le_list(data))
             target.flush()
             stop = time()
             diff = stop - start
@@ -120,7 +128,10 @@ def speed_test(board_id):
                 result.write_speed = write_speed
             print("Writing %i byte took %.3f seconds: %.3f B/s" % (test_size, diff, write_speed))
             start = time()
-            block = target.read_memory_block8(test_addr, test_size)
+            if width == 8:
+                block = target.read_memory_block8(test_addr, test_size)
+            elif width == 32:
+                block = conversion.u32le_list_to_byte_list(target.read_memory_block32(test_addr, test_size // 4))
             target.flush()
             stop = time()
             diff = stop - start
@@ -147,12 +158,15 @@ def speed_test(board_id):
                 print("TEST PASSED")
             return not error
 
-        def test_rom(record_speed=False):
+        def test_rom(record_speed=False, width=8):
             print("\n\n------ TEST ROM READ SPEED [%s] ------" % test_config)
             test_addr = rom_start
             test_size = rom_size
             start = time()
-            block = target.read_memory_block8(test_addr, test_size)
+            if width == 8:
+                block = target.read_memory_block8(test_addr, test_size)
+            elif width == 32:
+                block = conversion.u32le_list_to_byte_list(target.read_memory_block32(test_addr, test_size // 4))
             target.flush()
             stop = time()
             diff = stop - start
@@ -167,18 +181,28 @@ def speed_test(board_id):
             print("TEST PASSED")
             return True
         
-        # Without memcache
-        passed = test_ram(True)
+        # 8-bit without memcache
+        passed = test_ram(True, 8)
         test_count += 1
         test_pass_count += int(passed)
         
-        passed = test_rom(True)
+        passed = test_rom(True, 8)
+        test_count += 1
+        test_pass_count += int(passed)
+        
+        # 32-bit without memcache
+        test_config = "uncached 32-bit"
+        passed = test_ram(False, 32)
+        test_count += 1
+        test_pass_count += int(passed)
+        
+        passed = test_rom(False, 32)
         test_count += 1
         test_pass_count += int(passed)
         
         # With memcache
         target = target.get_target_context()
-        test_config = "cached, pass 1"
+        test_config = "cached 8-bit, pass 1"
         
         passed = test_ram()
         test_count += 1
@@ -189,7 +213,7 @@ def speed_test(board_id):
         test_pass_count += int(passed)
         
         # Again with memcache
-        test_config = "cached, pass 2"
+        test_config = "cached 8-bit, pass 2"
         passed = test_ram()
         test_count += 1
         test_pass_count += int(passed)
