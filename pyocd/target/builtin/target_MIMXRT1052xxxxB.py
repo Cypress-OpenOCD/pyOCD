@@ -1,20 +1,19 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2017 NXP
- Copyright (c) 2018 Arm Ltd
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# pyOCD debugger
+# Copyright (c) 2017 NXP
+# Copyright (c) 2018 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from ...flash.flash import Flash
 from ...core.coresight_target import CoreSightTarget
@@ -923,8 +922,8 @@ class MIMXRT1052xxxxB_hyperflash(CoreSightTarget):
         RamRegion(name="semc_alias",        start=0x10000000, length=0x10000000, alias='semc'), # 256 MB
         RamRegion(name="dtcm",              start=0x20000000, length=0x80000), # 512 KB
         RamRegion(name="ocram",             start=0x20200000, length=0x80000), # 512 KB
-        FlashRegion(name="flexspi",         start=0x60000000, length=0x1f800000, blocksize=0x1000,
-            is_boot_memory=True, algo=FLASH_ALGO_HYPERFLASH),
+        FlashRegion(name="flexspi",         start=0x60000000, length=0x1f800000, blocksize=0x40000,
+            is_boot_memory=True, algo=FLASH_ALGO_HYPERFLASH, page_size=0x200),
         RamRegion(name="semc",              start=0x80000000, end=0xdfffffff, is_external=True)
         )
 
@@ -947,7 +946,7 @@ class MIMXRT1052xxxxB_quadspi(CoreSightTarget):
         RamRegion(name="dtcm",              start=0x20000000, length=0x80000), # 512 KB
         RamRegion(name="ocram",             start=0x20200000, length=0x80000), # 512 KB
         FlashRegion(name="flexspi",         start=0x60000000, length=0x1f800000, blocksize=0x1000,
-            is_boot_memory=True, algo=FLASH_ALGO_QUADSPI),
+            is_boot_memory=True, algo=FLASH_ALGO_QUADSPI, page_size=0x100),
         RamRegion(name="semc",              start=0x80000000, end=0xdfffffff, is_external=True)
         )
 

@@ -1,19 +1,18 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2006-2013 ARM Limited
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# pyOCD debugger
+# Copyright (c) 2006-2013 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from ...flash.flash import Flash
 from ...core.coresight_target import (SVDFile, CoreSightTarget)
@@ -46,26 +45,16 @@ FLASH_ALGO = { 'load_address' : 0x10000000,
                'static_base' : 0x1000019c,
                'min_program_length' : 256,
                'analyzer_supported' : False
-              };
-
-class Flash_lpc11u24(Flash):
-
-    def __init__(self, target):
-        super(Flash_lpc11u24, self).__init__(target, FLASH_ALGO)
-
-    # TODO - temporary until flash algo is rebuilt with 4K page program size
-    def program_page(self, flashPtr, bytes):
-        write_size = 1024
-        for i in range(0, 4):
-            data = bytes[i * write_size : (i + 1) * write_size]
-            Flash.program_page(self, flashPtr + i * write_size, data)
+              }
 
 class LPC11U24(CoreSightTarget):
     VENDOR = "NXP"
     
     memoryMap = MemoryMap(
-        FlashRegion(    start=0,           length=0x8000,       blocksize=0x1000, is_boot_memory=True,
-            flash_class=Flash_lpc11u24),
+        FlashRegion(    start=0,           length=0x8000,   is_boot_memory=True,
+                                                            blocksize=0x1000,
+                                                            page_size=0x400,
+                                                            phrase_size=256),
         RamRegion(      start=0x10000000,  length=0x1000)
         )
 

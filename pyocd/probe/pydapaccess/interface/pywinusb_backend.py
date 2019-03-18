@@ -1,21 +1,21 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2006-2013 ARM Limited
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# pyOCD debugger
+# Copyright (c) 2006-2013 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from .interface import Interface
+from .common import filter_device_by_usage_page
 from ..dap_access_api import DAPAccessIntf
 from ....utility.timeout import Timeout
 import logging
@@ -43,8 +43,6 @@ class PyWinUSB(Interface):
     a USB HID device using pywinusb:
         - write/read an endpoint
     """
-    vid = 0
-    pid = 0
 
     isAvailable = IS_AVAILABLE
 
@@ -57,7 +55,6 @@ class PyWinUSB(Interface):
         # comprable to a based list implmentation.
         self.rcv_data = collections.deque()
         self.device = None
-        self.packet_size = 64
 
     # handler called when a report is received
     def rx_handler(self, data):
@@ -115,6 +112,12 @@ class PyWinUSB(Interface):
         for dev in all_mbed_devices:
             try:
                 dev.open(shared=True)
+
+                # Perform device-specific filtering.
+                if filter_device_by_usage_page(dev.vendor_id, dev.product_id, dev.hid_caps.usage_page):
+                    dev.close()
+                    continue
+
                 report = dev.find_output_reports()
                 if len(report) != 1:
                     dev.close()

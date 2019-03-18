@@ -66,10 +66,6 @@ ERASE_OPTIONS = {
     'sector': False,
     }
 
-class InvalidArgumentError(RuntimeError):
-    """! @brief Exception class raised for invalid target names."""
-    pass
-
 def convert_frequency(value):
     """! @brief Applies scale suffix to frequency value string."""
     value = value.strip()
@@ -305,9 +301,6 @@ class PyOCDTool(object):
 
             # Successful exit.
             return 0
-        except InvalidArgumentError as e:
-            self._parser.error(e)
-            return 1
         except KeyboardInterrupt:
             return 0
         except Exception as e:
@@ -317,10 +310,14 @@ class PyOCDTool(object):
     def show_options_help(self):
         for infoName in sorted(options.OPTIONS_INFO.keys()):
             info = options.OPTIONS_INFO[infoName]
+            if isinstance(info.type, tuple):
+                typename = ", ".join(t.__name__ for t in info.type)
+            else:
+                typename = info.type.__name__
             print((colorama.Fore.BLUE + "{name}"
                 + colorama.Style.RESET_ALL + colorama.Fore.GREEN + " ({typename})"
                 + colorama.Style.RESET_ALL + " {help}").format(
-                name=info.name, typename=info.type.__name__, help=info.help))
+                name=info.name, typename=typename, help=info.help))
     
     def do_list(self):
         # Default to listing probes.
@@ -476,7 +473,7 @@ class PyOCDTool(object):
                 gdb = gdbs[0]
                 while gdb.isAlive():
                     gdb.join(timeout=0.5)
-        except Exception as e:
+        except (KeyboardInterrupt, Exception):
             for gdb in gdbs:
                 gdb.stop()
             raise

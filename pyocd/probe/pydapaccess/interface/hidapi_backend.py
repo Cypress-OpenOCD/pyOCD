@@ -1,21 +1,21 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2006-2013 ARM Limited
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# pyOCD debugger
+# Copyright (c) 2006-2013 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from .interface import Interface
+from .common import filter_device_by_usage_page
 from ..dap_access_api import DAPAccessIntf
 from ....utility.compatibility import to_str_safe
 import logging
@@ -39,8 +39,6 @@ class HidApiUSB(Interface):
     a USB HID device using cython-hidapi:
         - write/read an endpoint
     """
-    vid = 0
-    pid = 0
 
     isAvailable = IS_AVAILABLE
 
@@ -48,13 +46,12 @@ class HidApiUSB(Interface):
         super(HidApiUSB, self).__init__()
         # Vendor page and usage_id = 2
         self.device = None
-        self.packet_size = 64
 
     def open(self):
         try:
             self.device.open_path(self.device_info['path'])
         except IOError as exc:
-            raise six.raise_from(DAPAccessIntf.DeviceError("Unable to open device"), exc)
+            raise six.raise_from(DAPAccessIntf.DeviceError("Unable to open device: " + str(exc)), exc)
 
     @staticmethod
     def get_all_connected_interfaces():
@@ -76,12 +73,18 @@ class HidApiUSB(Interface):
             if (product_name.find("CMSIS-DAP") < 0):
                 # Skip non cmsis-dap devices
                 continue
+            
+            vid = deviceInfo['vendor_id']
+            pid = deviceInfo['product_id']
+            
+            # Perform device-specific filtering.
+            if filter_device_by_usage_page(vid, pid, deviceInfo['usage_page']):
+                continue
 
             try:
-                dev = hid.device(vendor_id=deviceInfo['vendor_id'], product_id=deviceInfo['product_id'],
-                    path=deviceInfo['path'])
-            except IOError:
-                log.debug("Failed to open Mbed device")
+                dev = hid.device(vendor_id=vid, product_id=pid, path=deviceInfo['path'])
+            except IOError as exc:
+                log.debug("Failed to open USB device: %s", exc)
                 continue
 
             # Create the USB interface object for this device.
@@ -89,8 +92,8 @@ class HidApiUSB(Interface):
             new_board.vendor_name = deviceInfo['manufacturer_string']
             new_board.product_name = deviceInfo['product_string']
             new_board.serial_number = deviceInfo['serial_number']
-            new_board.vid = deviceInfo['vendor_id']
-            new_board.pid = deviceInfo['product_id']
+            new_board.vid = vid
+            new_board.pid = pid
             new_board.device_info = deviceInfo
             new_board.device = dev
             boards.append(new_board)
