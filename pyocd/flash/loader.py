@@ -201,7 +201,7 @@ class FileProgrammer(object):
         elf = ELFBinaryFile(file_obj, self._session.target.memory_map)
         for section in elf.sections:
             if ((section.type == 'SHT_PROGBITS')
-                    and ((section.flags & (SH_FLAGS.SHF_ALLOC | SH_FLAGS.SHF_WRITE)) == SH_FLAGS.SHF_ALLOC)
+                    and (section.flags & SH_FLAGS.SHF_ALLOC)
                     and (section.length > 0)
                     and (section.region.is_flash)):
                 LOG.debug("Writing section %s", repr(section))
