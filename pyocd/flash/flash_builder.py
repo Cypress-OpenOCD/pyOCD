@@ -328,6 +328,10 @@ class FlashBuilder(object):
         by page_erase_program so it is recommended to call this before beginning programming
         This is done automatically by smart_program.
         """
+
+        # <SMIF hack START>. Init external flash before reading the data for page weight estimation
+        self.flash.init(self.flash.Operation.PROGRAM)
+
         # Quickly estimate how many pages are the same
         page_erase_count = 0
         page_erase_weight = 0
@@ -351,6 +355,9 @@ class FlashBuilder(object):
             elif page.same is True:
                 # Page is confirmed to be the same so no programming weight
                 pass
+
+        # <SMIF hack END>
+        self.flash.uninit()
 
         self.page_erase_count = page_erase_count
         self.page_erase_weight = page_erase_weight
