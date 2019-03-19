@@ -1,19 +1,18 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2006-2019 ARM Limited
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# pyOCD debugger
+# Copyright (c) 2006-2019 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from ..core import exceptions
 from ..core.target import Target
@@ -273,7 +272,7 @@ class GDBServer(threading.Thread):
         self.telnet_port = session.options.get('telnet_port', 4444)
         if self.telnet_port != 0:
             self.telnet_port += self.core
-        self.vector_catch = session.options.get('vector_catch', Target.CATCH_HARD_FAULT)
+        self.vector_catch = session.options.get('vector_catch', "h")
         self.target.set_vector_catch(convert_vector_catch(self.vector_catch))
         self.step_into_interrupt = session.options.get('step_into_interrupt', False)
         self.persist = session.options.get('persist', False)
@@ -399,7 +398,6 @@ class GDBServer(threading.Thread):
             while self.isAlive():
                 pass
             self.log.info("GDB server thread killed")
-        self.board.uninit()
 
     def _cleanup(self):
         self.log.debug("GDB server cleaning up")

@@ -1,19 +1,18 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2006-2013 ARM Limited
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# pyOCD debugger
+# Copyright (c) 2006-2013 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from ...flash.flash import Flash
 from ...core.coresight_target import (SVDFile, CoreSightTarget)
@@ -48,25 +47,14 @@ FLASH_ALGO = {
     'analyzer_address' : 0x10001000  # Analyzer 0x10001000..0x10000600
 }
 
-
-class Flash_lpc824(Flash):
-    def __init__(self, target):
-        super(Flash_lpc824, self).__init__(target, FLASH_ALGO)
-
-    # TODO - temporary until flash algo is rebuilt with 1K page program size
-    def program_page(self, flashPtr, bytes):
-        write_size = 512
-        for i in range(0, 2):
-            data = bytes[i * write_size : (i + 1) * write_size]
-            Flash.program_page(self, flashPtr + i * write_size, data)
-
 class LPC824(CoreSightTarget):
 
     VENDOR = "NXP"
     
     memoryMap = MemoryMap(
-        FlashRegion(    start=0,           length=0x8000,       blocksize=0x400, is_boot_memory=True,
-            flash_class=Flash_lpc824),
+        FlashRegion(    start=0,           length=0x8000,       is_boot_memory=True,
+                                                                blocksize=1024,
+                                                                page_size=512),
         RamRegion(      start=0x10000000,  length=0x2000)
         )
 

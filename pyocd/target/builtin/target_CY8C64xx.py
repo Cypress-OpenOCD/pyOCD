@@ -19,6 +19,7 @@ from time import (sleep)
 
 from .CY8C6xx7_MAIN import flash_algo as flash_algo_main
 from .CY8C6xx7_WORK import flash_algo as flash_algo_work
+from .target_CY8C6xx7 import PSoC6FlashCommon
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
@@ -27,7 +28,31 @@ from ...coresight.cortex_m import CortexM
 from ...utility.notification import Notification
 from ...utility.timeout import Timeout
 
+is_flashing = False
 
+class PSoC6FlashSecure(PSoC6FlashCommon):
+    def __init__(self, target, flash_algo):
+        super(PSoC6FlashSecure, self).__init__(target, flash_algo)
+        
+    def init(self, operation, address=None, clock=0, reset=True):
+        global is_flashing
+        is_flashing = True
+        super(PSoC6FlashCommon, self).init(operation, address, clock, reset)
+
+    def uninit(self):
+        global is_flashing
+        super(PSoC6FlashCommon, self).uninit()
+        is_flashing = False
+
+class Flash_CY8C64xx_Main(PSoC6FlashSecure):
+    def __init__(self, target):
+        super(Flash_CY8C64xx_Main, self).__init__(target, flash_algo_main)
+
+
+class Flash_CY8C64xx_Work(PSoC6FlashSecure):
+    def __init__(self, target):
+        super(Flash_CY8C64xx_Work, self).__init__(target, flash_algo_work)
+        
 class cy8c64xx(CoreSightTarget):
     VENDOR = "Cypress"
     AP_NUM = None
@@ -35,9 +60,9 @@ class cy8c64xx(CoreSightTarget):
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
         FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
-                    algo=flash_algo_main),
+                    algo=flash_algo_main, flash_class=Flash_CY8C64xx_Main),
         FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
-                    algo=flash_algo_work),
+                    algo=flash_algo_work, flash_class=Flash_CY8C64xx_Work),
 
         RamRegion(start=0x08000000, length=0x10000)
     )
@@ -170,16 +195,11 @@ class CortexM_CY8C6xx7(CortexM):
 
         logging.info("Device acquired successfully")
         pass
+    
+    def resume(self):
+        global is_flashing
+        if not is_flashing:
+            logging.info("Clearing TEST_MODE bit...")
+            self.write32(0x40260100, 0x00000000)
 
-    # def resume(self):
-    #     if self.get_state() != Target.TARGET_HALTED:
-    #         logging.debug('cannot resume: target not halted')
-    #         return
-    # 
-    #     self.notify(Notification(event=Target.EVENT_PRE_RUN, source=self, data=Target.RUN_TYPE_RESUME))
-    #     self._run_token += 1
-    #     self.clear_debug_cause_bits()
-    #     self.write32(0x40260100, 0x00000000)
-    #     self.write_memory(CortexM.DHCSR, CortexM.DBGKEY | CortexM.C_DEBUGEN)
-    #     self.flush()
-    #     self.notify(Notification(event=Target.EVENT_POST_RUN, source=self, data=Target.RUN_TYPE_RESUME))
+        super(CortexM_CY8C6xx7, self).resume()

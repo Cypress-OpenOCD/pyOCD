@@ -64,6 +64,9 @@ Documentation
 
 The pyOCD documentation is located in [the docs directory](docs/).
 
+In addition to user guides, you can generate reference documentation using Doxygen with the
+supplied config file in the `docs/` directory.
+
 
 Installing
 ----------
@@ -116,21 +119,14 @@ How to install libusb depends on your OS:
 
 ### udev rules on Linux
 
-If you encounter an issue on Linux where `pyocd list` won't detect attached boards without
-sudo, the reason is most likely USB device access permissions. In Ubuntu 16.04+ these are handled
-with udev and can be solved by adding a new udev rule.
+On Linux, particularly Ubuntu 16.04+, you must configure udev rules to allow pyOCD to access debug
+probes from user space. Otherwise you will need to run pyOCD as root, using sudo, which is very
+highly discouraged. (You should _never_ run pyOCD as root on any OS.)
 
-An example udev rule file is included in the [udev](https://github.com/mbedmicro/pyOCD/tree/master/udev)
-folder in the pyOCD repository. Just copy this file into `/etc/udev/rules.d` to enable user access
-to both [DAPLink](https://os.mbed.com/handbook/DAPLink)-based debug probes as well as STLinkV2 and
-STLinkV3.
-
-If you use different, but compatible, debug probe, you can check the IDs with the ``dmesg`` command.
-
-   -  Run ``dmesg``
-   -  Plug in your board
-   -  Run ``dmesg`` again and check what was added
-   -  Look for line similar to ``usb 2-2.1: New USB device found, idVendor=0d28, idProduct=0204``
+To help with this, example udev rules files are included with pyOCD in the
+[udev](https://github.com/mbedmicro/pyOCD/tree/master/udev) folder. The
+[readme](https://github.com/mbedmicro/pyOCD/tree/master/udev/README.md) in this folder has detailed
+instructions.
 
 
 Standalone GDB server
@@ -163,6 +159,10 @@ existing setups. The primary difference is the set of gdb monitor commands.
 Recommended GDB and IDE setup
 -----------------------------
 
+The recommended toolchain for embedded Arm Cortex-M development is [GNU Arm
+Embedded](https://developer.arm.com/tools-and-software/open-source-software/gnu-toolchain/gnu-rm),
+provided by Arm. GDB is included with this toolchain.
+
 The GDB server works well with [Eclipse](https://www.eclipse.org/) and the [GNU MCU Eclipse
 plug-ins](https://gnu-mcu-eclipse.github.io/). GNU MCU Eclipse fully supports pyOCD with an included
 pyOCD debugging plugin.
@@ -191,7 +191,7 @@ Contributions
 -------------
 
 We welcome contributions to pyOCD in any area. Please see the [contribution
-guidelines](CONTRIBUTING.md) for details.
+guidelines](CONTRIBUTING.md) for detailed requirements for contributions.
 
 To report bugs, please [create an issue](https://github.com/mbedmicro/pyOCD/issues/new) in the
 GitHub project.
@@ -200,6 +200,7 @@ GitHub project.
 License
 -------
 
-PyOCD is licensed with Apache 2.0. See the [LICENSE](LICENSE) file for the full text of the license.
+PyOCD is licensed with the permissive Apache 2.0 license. See the [LICENSE](LICENSE) file for the
+full text of the license.
 
-Copyright © 2006-2018 Arm Ltd
+Copyright © 2006-2019 Arm Ltd

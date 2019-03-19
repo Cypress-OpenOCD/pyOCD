@@ -1,19 +1,18 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2006-2013,2018 ARM Limited
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# pyOCD debugger
+# Copyright (c) 2006-2013,2018 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 import re
@@ -51,12 +50,19 @@ LOG_PACKET_BUILDS = False
 def _get_interfaces():
     """Get the connected USB devices"""
     # Get CMSIS-DAPv1 interfaces.
-    interfaces = INTERFACE[USB_BACKEND].get_all_connected_interfaces()
+    v1_interfaces = INTERFACE[USB_BACKEND].get_all_connected_interfaces()
     
-    # Add in CMSIS-DAPv2 interfaces.
-    interfaces += INTERFACE[USB_BACKEND_V2].get_all_connected_interfaces()
+    # Get CMSIS-DAPv2 interfaces.
+    v2_interfaces = INTERFACE[USB_BACKEND_V2].get_all_connected_interfaces()
     
-    return interfaces
+    # Prefer v2 over v1 if a device provides both.
+    devices_in_both = [v1 for v1 in v1_interfaces for v2 in v2_interfaces
+                        if _get_unique_id(v1) == _get_unique_id(v2)]
+    for dev in devices_in_both:
+        v1_interfaces.remove(dev)
+        
+    # Return the combined list.
+    return v1_interfaces + v2_interfaces
 
 
 def _get_unique_id(interface):
