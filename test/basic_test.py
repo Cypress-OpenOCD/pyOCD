@@ -215,12 +215,7 @@ def basic_test(board_id, file):
         # Verify the 1st and 3rd page were not erased, and that the 2nd page is fully erased
         data = target.read_memory_block8(addr_flash, page_size * 3)
         
-        #ASHY
-        erase_value = [0xFF]
-        if board.target_type == "cy8c6xxa" or board.target_type == "cy8c6xx7":
-            erase_value = [0x00]
-        
-        expected = fill + erase_value * page_size + fill
+        expected = fill + [flash.region.erased_byte_value] * page_size + fill
         if data == expected:
             print("TEST PASSED")
         else:

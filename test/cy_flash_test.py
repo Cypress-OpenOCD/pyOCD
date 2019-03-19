@@ -270,9 +270,12 @@ def flash_test(board_id):
         with open(binary_file, "rb") as f:
             data = f.read()
         data = struct.unpack("%iB" % len(data), data)
-        size = len(data)
 
         ram_region = memory_map.get_first_region_of_type(MemoryType.RAM)
+        if len(data) > ram_region.length:
+            data = data[:ram_region.length]
+        
+        size = len(data)
 
         print("Start load %s to ram"% (binary_file))
         start = time()
@@ -290,67 +293,71 @@ def flash_test(board_id):
             print("TEST FAILED")
         test_count += 1
 
-        print("\n------ Test Program sflash hex ------")
-        hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.hex"]))
-        sflash_ofset = 0x800
-
-        programmer = loader.FileProgrammer(session, chip_erase=True)
-        print("Start program %s to work flash"% (hex_file))
-        start = time()
-        programmer.program(hex_file)
-        stop = time()
-        diff = stop - start
-        print("Elapsed time is %.3f seconds"% (diff))
-
-        binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
-        with open(binary_file, "rb") as f:
-            data = f.read()
-        data = struct.unpack("%iB" % len(data), data)
-
-        print("Start verification")
+        #check if sflash defined
+        s_flash_region = None
         for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
             if flash_region.start == 0x16000000:
                 s_flash_region = flash_region
                 break
+        if s_flash_region != None:
+            
+            print("\n------ Test Program sflash hex ------")
+            hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.hex"]))
+            sflash_ofset = 0x800
 
-        data_flashed = target.read_memory_block8(s_flash_region.start + sflash_ofset, len(data))
-        if same(data_flashed, data):
-            print("TEST PASSED")
-            test_pass_count += 1
-        else:
-            print("TEST FAILED")
-        test_count += 1
+            programmer = loader.FileProgrammer(session, chip_erase=True)
+            print("Start program %s to work flash"% (hex_file))
+            start = time()
+            programmer.program(hex_file)
+            stop = time()
+            diff = stop - start
+            print("Elapsed time is %.3f seconds"% (diff))
 
-        print("\n------ Test Program sflash bin ------")
-        bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
-        sflash_ofset = 0x800
+            binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
+            with open(binary_file, "rb") as f:
+                data = f.read()
+            data = struct.unpack("%iB" % len(data), data)
 
-        for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
-            if flash_region.start == 0x16000000:
-                s_flash_region = flash_region
-                break
+            print("Start verification")
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
-        print("Start program %s to work flash"% (bin_file))
-        start = time()
-        programmer.program(bin_file, format ='bin', base_address =s_flash_region.start + sflash_ofset)
-        stop = time()
-        diff = stop - start
-        print("Elapsed time is %.3f seconds"% (diff))
+            data_flashed = target.read_memory_block8(s_flash_region.start + sflash_ofset, len(data))
+            if same(data_flashed, data):
+                print("TEST PASSED")
+                test_pass_count += 1
+            else:
+                print("TEST FAILED")
+            test_count += 1
 
-        with open(bin_file, "rb") as f:
-            data = f.read()
-        data = struct.unpack("%iB" % len(data), data)
+            print("\n------ Test Program sflash bin ------")
+            bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
+            sflash_ofset = 0x800
 
-        print("Start verification")
+            for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+                if flash_region.start == 0x16000000:
+                    s_flash_region = flash_region
+                    break
 
-        data_flashed = target.read_memory_block8(s_flash_region.start + sflash_ofset, len(data))
-        if same(data_flashed, data):
-            print("TEST PASSED")
-            test_pass_count += 1
-        else:
-            print("TEST FAILED")
-        test_count += 1
+            programmer = loader.FileProgrammer(session, chip_erase=True)
+            print("Start program %s to work flash"% (bin_file))
+            start = time()
+            programmer.program(bin_file, format ='bin', base_address =s_flash_region.start + sflash_ofset)
+            stop = time()
+            diff = stop - start
+            print("Elapsed time is %.3f seconds"% (diff))
+
+            with open(bin_file, "rb") as f:
+                data = f.read()
+            data = struct.unpack("%iB" % len(data), data)
+
+            print("Start verification")
+
+            data_flashed = target.read_memory_block8(s_flash_region.start + sflash_ofset, len(data))
+            if same(data_flashed, data):
+                print("TEST PASSED")
+                test_pass_count += 1
+            else:
+                print("TEST FAILED")
+            test_count += 1
 
         #PROGTOOLS - 28
         for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
@@ -456,7 +463,10 @@ def flash_test(board_id):
         # data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         # if same(data_flashed, data):
         target.reset()
-        status = target.cores[1].get_state()
+            
+        num = len(target.cores) - 1
+ 
+        status = target.cores[num].get_state()
         if status == Target.TARGET_RUNNING:
             print("TEST PASSED")
             test_pass_count += 1
@@ -518,7 +528,8 @@ def flash_test(board_id):
         #data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         #if same(data_flashed, data):
         target.reset()
-        status = target.cores[1].get_state()
+        num = len(target.cores) - 1
+        status = target.cores[num].get_state()
         #if status == Target.TARGET_RUNNING:
         print("TEST PASSED")
         test_pass_count += 1
@@ -608,6 +619,8 @@ def flash_test(board_id):
 
         result.passed = test_count == test_pass_count
         return result
+    
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='pyOCD flash test')
