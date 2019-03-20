@@ -7,15 +7,15 @@ variables:
 # ENV_DIR: env
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
-before_script:
-  - set
-  - python -V               # Print out python version for debugging
-  - virtualenv venv  
-  - call .\venv\Scripts\activate.bat
-  - echo [INFO] Installing python modules
-  - pip install setuptools_scm
-  - pip install setuptools_scm_git_archive
-  - pip install -r dev-requirements.txt
+#before_script:
+#  - set
+#  - python -V               # Print out python version for debugging
+#  - virtualenv venv  
+#  - call .\venv\Scripts\activate.bat
+#  - echo [INFO] Installing python modules
+#  - pip install setuptools_scm
+#  - pip install setuptools_scm_git_archive
+#  - pip install -r dev-requirements.txt
 
 cache:
   paths:
@@ -34,6 +34,14 @@ unit_test:
   tags:
   - CYPTEST-W1064-V1
   script:
+    - set
+    - python -V               # Print out python version for debugging
+    - virtualenv venv
+    - call .\venv\Scripts\activate.bat
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
     - cd
     - echo [INFO] Running unit tests
     - pytest
@@ -49,3 +57,17 @@ functional_test:
     - echo [INFO] Running functional tests
     # - python automated_test.py -b 190100008b131509028b131500000000000000002e127069
     - python automated_test.py -b 190100008b13151c028b131500000000000000002e127069
+    
+functional_test_mac1:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1014
+  script:
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
+    - python3 automated_test.py
