@@ -19,6 +19,8 @@ from time import (sleep)
 
 from .CY8C6xx7_MAIN import flash_algo as flash_algo_main
 from .CY8C6xx7_WORK import flash_algo as flash_algo_work
+from .CY8C64xx_SMIF import flash_algo as flash_algo_smif
+
 from .target_CY8C6xx7 import PSoC6FlashCommon
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
@@ -27,6 +29,7 @@ from ...core.target import Target
 from ...coresight.cortex_m import CortexM
 from ...utility.notification import Notification
 from ...utility.timeout import Timeout
+from ...flash.flash import Flash
 
 is_flashing = False
 
@@ -52,6 +55,22 @@ class Flash_CY8C64xx_Main(PSoC6FlashSecure):
 class Flash_CY8C64xx_Work(PSoC6FlashSecure):
     def __init__(self, target):
         super(Flash_CY8C64xx_Work, self).__init__(target, flash_algo_work)
+
+        
+class Flash_CY8C64xx_SMIF(Flash):
+    def __init__(self, target):
+        super(Flash_CY8C64xx_SMIF, self).__init__(target, flash_algo_smif)
+        
+    def init(self, operation, address=None, clock=0, reset=True):
+        global is_flashing
+        is_flashing = True
+        super(Flash_CY8C64xx_SMIF, self).init(operation, address, clock, reset)
+
+    def uninit(self):
+        global is_flashing
+        super(Flash_CY8C64xx_SMIF, self).uninit()
+        is_flashing = False
+        
         
 class cy8c64xx(CoreSightTarget):
     VENDOR = "Cypress"
@@ -59,11 +78,12 @@ class cy8c64xx(CoreSightTarget):
 
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
-        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
+        FlashRegion(start=0x10000000, length=0xA0000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
                     algo=flash_algo_main, flash_class=Flash_CY8C64xx_Main),
         FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
                     algo=flash_algo_work, flash_class=Flash_CY8C64xx_Work),
-
+        #FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, is_boot_memory=False, erased_byte_value=0xFF,
+        #            is_testable=False, is_powered_on_boot=False, algo=flash_algo_smif, flash_class=Flash_CY8C64xx_SMIF),
         RamRegion(start=0x08000000, length=0x10000)
     )
 
