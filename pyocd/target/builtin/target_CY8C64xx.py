@@ -109,9 +109,7 @@ class CortexM_CY8C6xx7(CortexM):
 
         if reset_type is Target.ResetType.HW:
             self.session.probe.reset()
-            sleep(0.5)
-            self._ap.dp.init()
-            self._ap.dp.power_up_debug()
+            self.reinit_dap()
             # This is ugly, but FPB gets disabled after HW Reset so breakpoints stop working
             self.bp_manager._fpb.enable()
 
@@ -154,36 +152,51 @@ class CortexM_CY8C6xx7(CortexM):
                 raise Exception("Timeout waiting for target halt")
 
     def reinit_dap(self):
-        with Timeout(5.0) as t_o:
+        with Timeout(2.0) as t_o:
             while t_o.check():
                 try:
                     self._ap.dp.init()
                     self._ap.dp.power_up_debug()
                     self.flush()
+                    return
                 except exceptions.TransferError:
                     self.flush()
-                    pass
 
-                break
-        pass
+            if not t_o.check():
+                logging.error("Failed to initialize DAP")
+                
+    def acquire(self):
+        with Timeout(2.0) as t_o:
+            while t_o.check():
+                try:
+                    self._ap.dp.init()
+                    self._ap.dp.power_up_debug()
+                    self.write32(0x4023004C, 0)
+                    self.write32(0x40260100, 0x80000000)
+                    self.flush()
+                    return
+                except exceptions.TransferError:
+                    pass
+                
+            if not t_o.check():
+                logging.error("Failed to enter test mode")
 
     def reset_and_halt(self, reset_type=None):
         logging.info("Acquiring target...")
-
-        self.halt()
+        
         self.reset(self.ResetType.SW_SYSRESETREQ)
-        self.reinit_dap()
-        self.write32(0x4023004C, 0)
-        self.write32(0x40260100, 0x80000000)
-        self.flush()
+        self.acquire()
 
         with Timeout(5.0) as t_o:
             while t_o.check():
-                if self.read32(0x4023004C) == 0x12344321:
-                    break
+                try:
+                    if self.read32(0x4023004C) == 0x12344321:
+                        break
+                except exceptions.TransferError:
+                    pass
 
         if not t_o.check():
-            logging.warning("Failed to acquire the target (listen window not implemented?)")
+            logging.error("Failed to acquire the target (listen window not implemented?)")
 
         if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
             logging.warning("CM4 is sleeping, trying to wake it up...")
@@ -192,8 +205,6 @@ class CortexM_CY8C6xx7(CortexM):
         self.halt()
         self.wait_halted()
         self.write_core_register('xpsr', CortexM.XPSR_THUMB)
-
-        logging.info("Device acquired successfully")
         pass
     
     def resume(self):
