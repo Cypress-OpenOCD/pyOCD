@@ -15,7 +15,7 @@
 # limitations under the License.
 from __future__ import print_function
 
-import os, sys
+import os, sys, time
 import traceback
 import argparse
 from collections import namedtuple
@@ -131,8 +131,12 @@ def connect_test(board):
 
     print("\n\n----- TESTING CONNECT/DISCONNECT -----")
     print("Flashing new binary")
-    FileProgrammer(live_session).program(binary_file, base_address=rom_start)
+    #ASHY
+    #FileProgrammer(live_session).program(binary_file, base_address=rom_start)
+    FileProgrammer(live_session).program(binary_file)
     live_board.target.reset()
+    #ASHY
+    time.sleep(3)
     test_count += 1
     print("Verifying target is running")
     if live_board.target.is_running():

@@ -157,6 +157,12 @@ def flash_test(board_id):
             with open(binary_file, "rb") as f:
                 data = f.read()
             data = struct.unpack("%iB" % len(data), data)
+            
+            #ASHY
+            #check if data and more_data does not overlapps
+            if len(data) > (rom_size/2):
+                data = data[:(rom_size/2)]
+                
             unused = rom_size - len(data)
             
             # Make sure data doesn't overflow this region.
@@ -268,6 +274,7 @@ def flash_test(board_id):
             page_size = flash.get_page_info(addr).size
             more_data = [0x33] * page_size * 2
             addr = (rom_start + rom_size // 2) + 1 #cover multiple pages
+
             fb = flash.get_flash_builder()
             fb.add_data(rom_start, data)
             fb.add_data(addr, more_data)

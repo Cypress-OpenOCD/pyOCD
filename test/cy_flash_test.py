@@ -138,7 +138,8 @@ def flash_test(board_id):
         memory_map = board.target.get_memory_map()
 
         errase_value = 0xFF
-        if board.target_type == "cy8c6xxa" or board.target_type == "cy8c6xx7":
+        if board.target_type == "cy8c6xxa" or board.target_type == "cy8c6xx7" or board.target_type == "cy8c64xx_cm4" \
+            or board.target_type == "cy8c64xx_cm0":
             errase_value = 0x00
 
         if board_id[:4] == "1901":
@@ -147,6 +148,8 @@ def flash_test(board_id):
             test_kit = "CY8CPROTO-063-4343W"
         elif board_id[:4] == "1909":
             test_kit = "CY8CPROTO-063-4343W"
+        elif board_id[:4] == "19FF":
+            test_kit = "CY8C6347BZI-BLD53_SEC"
         else:
             test_kit = "CY8C6347BZI-BLD53"
 
@@ -265,33 +268,33 @@ def flash_test(board_id):
             print("TEST FAILED")
         test_count += 1
 
-        print("\n------ Test Load ram bin ------")
-        binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_ram.bin"]))
-        with open(binary_file, "rb") as f:
-            data = f.read()
-        data = struct.unpack("%iB" % len(data), data)
+        #print("\n------ Test Load ram bin ------")
+        #binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_ram.bin"]))
+        #with open(binary_file, "rb") as f:
+        #    data = f.read()
+        #data = struct.unpack("%iB" % len(data), data)
 
-        ram_region = memory_map.get_first_region_of_type(MemoryType.RAM)
-        if len(data) > ram_region.length:
-            data = data[:ram_region.length]
+        #ram_region = memory_map.get_first_region_of_type(MemoryType.RAM)
+        #if len(data) > ram_region.length:
+        #    data = data[:ram_region.length]
         
-        size = len(data)
+        #size = len(data)
 
-        print("Start load %s to ram"% (binary_file))
-        start = time()
-        target.write_memory_block8(ram_region.start, data)
-        stop = time()
-        diff = stop - start
-        print("Elapsed time is %.3f seconds"% (diff))
+        #print("Start load %s to ram"% (binary_file))
+        #start = time()
+        #target.write_memory_block8(ram_region.start, data)
+        #stop = time()
+        #diff = stop - start
+        #print("Elapsed time is %.3f seconds"% (diff))
 
-        print("Start verification")
-        data_read = target.read_memory_block8(ram_region.start, size)
-        if same(data_read, data):
-            print("TEST PASSED")
-            test_pass_count += 1
-        else:
-            print("TEST FAILED")
-        test_count += 1
+        #print("Start verification")
+        #data_read = target.read_memory_block8(ram_region.start, size)
+        #if same(data_read, data):
+        #    print("TEST PASSED")
+        #    test_pass_count += 1
+        #else:
+        #    print("TEST FAILED")
+        #test_count += 1
 
         #check if sflash defined
         s_flash_region = None
@@ -463,6 +466,7 @@ def flash_test(board_id):
         # data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         # if same(data_flashed, data):
         target.reset()
+        sleep(3)
             
         num = len(target.cores) - 1
  
@@ -493,6 +497,7 @@ def flash_test(board_id):
         data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
             target.reset()
+            sleep(3)
 
             status = target.cores[0].get_state()
             if status == Target.TARGET_RUNNING:
@@ -528,6 +533,8 @@ def flash_test(board_id):
         #data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         #if same(data_flashed, data):
         target.reset()
+        sleep(3)
+
         num = len(target.cores) - 1
         status = target.cores[num].get_state()
         #if status == Target.TARGET_RUNNING:
