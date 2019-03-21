@@ -1,19 +1,19 @@
-"""
- mbed CMSIS-DAP debugger
- Copyright (c) 2006-2013 ARM Limited
+# pyOCD debugger
+# Copyright (c) 2013-2019 Arm Limited
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
 import logging
 from time import (sleep)
 
@@ -40,11 +40,11 @@ class PSoC6FlashSecure(PSoC6FlashCommon):
     def init(self, operation, address=None, clock=0, reset=True):
         global is_flashing
         is_flashing = True
-        super(PSoC6FlashCommon, self).init(operation, address, clock, reset)
+        super(PSoC6FlashSecure, self).init(operation, address, clock, reset)
 
     def uninit(self):
         global is_flashing
-        super(PSoC6FlashCommon, self).uninit()
+        super(PSoC6FlashSecure, self).uninit()
         is_flashing = False
 
 class Flash_CY8C64xx_Main(PSoC6FlashSecure):
@@ -231,7 +231,6 @@ class CortexM_CY8C6xx7(CortexM):
         self.halt()
         self.wait_halted()
         self.write_core_register('xpsr', CortexM.XPSR_THUMB)
-        pass
     
     def resume(self):
         global is_flashing
