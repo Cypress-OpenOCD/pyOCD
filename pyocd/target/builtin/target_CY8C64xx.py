@@ -84,7 +84,7 @@ class cy8c64xx(CoreSightTarget):
                     algo=flash_algo_work, flash_class=Flash_CY8C64xx_Work),
         #FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, is_boot_memory=False, erased_byte_value=0xFF,
         #            is_testable=False, is_powered_on_boot=False, algo=flash_algo_smif, flash_class=Flash_CY8C64xx_SMIF),
-        RamRegion(start=0x08000000, length=0x10000)
+        RamRegion(start=0x08000000, length=0x20000)
     )
 
     def __init__(self, link, ap_num):
@@ -204,7 +204,13 @@ class CortexM_CY8C6xx7(CortexM):
     def reset_and_halt(self, reset_type=None):
         logging.info("Acquiring target...")
         
-        self.reset(self.ResetType.SW_SYSRESETREQ)
+        #self.reset(self.ResetType.SW_SYSRESETREQ)
+        self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
+        try:
+            self.flush()
+        except exceptions.TransferError:
+            pass
+        
         self.acquire()
 
         with Timeout(5.0) as t_o:
