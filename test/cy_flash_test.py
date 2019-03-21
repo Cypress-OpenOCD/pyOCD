@@ -363,61 +363,61 @@ def flash_test(board_id):
             test_count += 1
 
         #PROGTOOLS - 28
-        for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
-            if flash_region.start == 0x18000000:
-                smif_flash_region = flash_region
+        #for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+        #    if flash_region.start == 0x18000000:
+        #        smif_flash_region = flash_region
 
-                print("\n------ Test Program smif hex ------")
-                hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.hex"]))
+        #       print("\n------ Test Program smif hex ------")
+        #        hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.hex"]))
 
-                programmer = loader.FileProgrammer(session, chip_erase=True)
-                print("Start program %s to work flash"% (hex_file))
-                start = time()
-                programmer.program(hex_file)
-                stop = time()
-                diff = stop - start
-                print("Elapsed time is %.3f seconds"% (diff))
+        #       programmer = loader.FileProgrammer(session, chip_erase=True)
+        #        print("Start program %s to work flash"% (hex_file))
+        #        start = time()
+        #        programmer.program(hex_file)
+        #        stop = time()
+        #        diff = stop - start
+        #        print("Elapsed time is %.3f seconds"% (diff))
 
-                binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.bin"]))
-                with open(binary_file, "rb") as f:
-                    data = f.read()
-                data = struct.unpack("%iB" % len(data), data)
+        #       binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.bin"]))
+        #        with open(binary_file, "rb") as f:
+        #            data = f.read()
+        #        data = struct.unpack("%iB" % len(data), data)
 
-                print("Start verification")
+        #        print("Start verification")
 
-                data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
-                if same(data_flashed, data):
-                    print("TEST PASSED")
-                    test_pass_count += 1
-                else:
-                    print("TEST FAILED")
-                test_count += 1
+        #        data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
+        #        if same(data_flashed, data):
+        #            print("TEST PASSED")
+        #            test_pass_count += 1
+        #        else:
+        #            print("TEST FAILED")
+        #        test_count += 1
 
         #PROGTOOLS - 28
-                print("\n------ Test Program smif bin ------")
-                bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
+        #        print("\n------ Test Program smif bin ------")
+        #        bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
 
-                programmer = loader.FileProgrammer(session, chip_erase=True)
-                print("Start program %s to work flash"% (bin_file))
-                start = time()
-                programmer.program(bin_file, format ='bin', base_address =smif_flash_region.start)
-                stop = time()
-                diff = stop - start
-                print("Elapsed time is %.3f seconds"% (diff))
+        #        programmer = loader.FileProgrammer(session, chip_erase=True)
+        #        print("Start program %s to work flash"% (bin_file))
+        #        start = time()
+        #        programmer.program(bin_file, format ='bin', base_address =smif_flash_region.start)
+        #        stop = time()
+        #        diff = stop - start
+        #        print("Elapsed time is %.3f seconds"% (diff))
 
-                with open(bin_file, "rb") as f:
-                    data = f.read()
-                data = struct.unpack("%iB" % len(data), data)
+        #        with open(bin_file, "rb") as f:
+        #            data = f.read()
+        #        data = struct.unpack("%iB" % len(data), data)
 
-                print("Start verification")
+        #        print("Start verification")
 
-                data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
-                if same(data_flashed, data):
-                    print("TEST PASSED")
-                    test_pass_count += 1
-                else:
-                    print("TEST FAILED")
-                test_count += 1
+        #        data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
+        #        if same(data_flashed, data):
+        #            print("TEST PASSED")
+        #            test_pass_count += 1
+        #        else:
+        #            print("TEST FAILED")
+        #        test_count += 1
 
         print("\n------ Test mass erase ------")
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
