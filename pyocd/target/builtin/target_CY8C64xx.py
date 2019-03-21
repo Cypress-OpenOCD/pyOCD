@@ -82,8 +82,8 @@ class cy8c64xx(CoreSightTarget):
                     algo=flash_algo_main, flash_class=Flash_CY8C64xx_Main),
         FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
                     algo=flash_algo_work, flash_class=Flash_CY8C64xx_Work),
-        #FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, is_boot_memory=False, erased_byte_value=0xFF,
-        #            is_testable=False, is_powered_on_boot=False, algo=flash_algo_smif, flash_class=Flash_CY8C64xx_SMIF),
+        FlashRegion(start=0x18000000, length=0x1000000, blocksize=0x10000, is_boot_memory=False, erased_byte_value=0xFF,
+                    is_testable=False, algo=flash_algo_smif, flash_class=Flash_CY8C64xx_SMIF),
         RamRegion(start=0x08000000, length=0x20000)
     )
 
