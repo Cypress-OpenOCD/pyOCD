@@ -37,7 +37,7 @@ from pyocd.core.target import Target
 
 import logging
 
-BOARDS_IN_TEST = 5
+BOARDS_IN_TEST = 1
 if platform.system() == "Windows":
     TEST_DATA_PATH = r"C:\openocd_test_data\files"
 else:
