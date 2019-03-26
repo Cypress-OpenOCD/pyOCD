@@ -109,6 +109,9 @@ class cy8c64xx(CoreSightTarget):
         self.aps[self.AP_NUM].core = core
         core.init()
         self.add_core(core)
+        region = self.memory_map.get_region_for_address(0x18000000)
+        region.flash.init(region.flash.Operation.VERIFY)
+        region.flash.uninit()
 
 
 class cy8c64xx_cm0(cy8c64xx):
