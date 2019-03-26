@@ -234,10 +234,6 @@ class CortexM_CY8C6xx7(CortexM):
         self.halt()
         self.wait_halted()
         self.write_core_register('xpsr', CortexM.XPSR_THUMB)
-        
-        region = self.memory_map.get_region_for_address(0x18000000)
-        region.flash.init(region.flash.Operation.VERIFY)
-        region.flash.uninit()
     
     def resume(self):
         global is_flashing
