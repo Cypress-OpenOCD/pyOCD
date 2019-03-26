@@ -16,6 +16,8 @@
 import logging
 from time import (time, sleep)
 
+from .CY8C6xxx_SMIF_S25FL512S import flash_algo as flash_algo_smif
+
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
@@ -177,6 +179,21 @@ ERASE_ALL_WEIGHT = 0.5 # Time it takes to perform a chip erase
 ERASE_SECTOR_WEIGHT = 0.05 # Time it takes to erase a page
 PROGRAM_PAGE_WEIGHT = 0.07 # Time it takes to program a page (Not including data transfer time)
 
+class Flash_CY8C6xx7_SMIF(Flash):
+    def __init__(self, target):
+        super(Flash_CY8C6xx7_SMIF, self).__init__(target, flash_algo_smif)
+        
+    def init(self, operation, address=None, clock=0, reset=True):
+        global is_flashing
+        is_flashing = True
+        super(Flash_CY8C6xx7_SMIF, self).init(operation, address, clock, reset)
+
+    def uninit(self):
+        global is_flashing
+        super(Flash_CY8C6xx7_SMIF, self).uninit()
+        is_flashing = False
+        
+        
 class CY8C6xx7(CoreSightTarget):
     VENDOR = "Cypress"
     
@@ -227,6 +244,9 @@ class CY8C6xx7(CoreSightTarget):
         core1.init()
         self.add_core(core0)
         self.add_core(core1)
+        region = self.memory_map.get_region_for_address(0x18000000)
+        region.flash.init(region.flash.Operation.VERIFY)
+        region.flash.uninit()
 
 
 class CortexM_CY8C6xx7(CortexM):
