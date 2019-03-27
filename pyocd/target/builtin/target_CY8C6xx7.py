@@ -184,14 +184,10 @@ class Flash_CY8C6xx7_SMIF(Flash):
         super(Flash_CY8C6xx7_SMIF, self).__init__(target, flash_algo_smif)
         
     def init(self, operation, address=None, clock=0, reset=True):
-        global is_flashing
-        is_flashing = True
         super(Flash_CY8C6xx7_SMIF, self).init(operation, address, clock, reset)
 
     def uninit(self):
-        global is_flashing
         super(Flash_CY8C6xx7_SMIF, self).uninit()
-        is_flashing = False
         
         
 class CY8C6xx7(CoreSightTarget):
@@ -246,7 +242,7 @@ class CY8C6xx7(CoreSightTarget):
         self.add_core(core1)
         region = self.memory_map.get_region_for_address(0x18000000)
         region.flash.init(region.flash.Operation.VERIFY)
-        region.flash.uninit()
+        region.flash.cleanup()
 
 
 class CortexM_CY8C6xx7(CortexM):
