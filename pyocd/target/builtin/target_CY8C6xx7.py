@@ -16,7 +16,7 @@
 import logging
 from time import (time, sleep)
 
-from .CY8C6xxx_SMIF_S25FL512S import flash_algo as flash_algo_smif
+from .flash_algo_CY8C6xxx_SMIF_S25FL512S import flash_algo as flash_algo_smif
 
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget

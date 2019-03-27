@@ -17,9 +17,9 @@
 import logging
 from time import (sleep)
 
-from .CY8C6xx7_MAIN import flash_algo as flash_algo_main
-from .CY8C6xx7_WORK import flash_algo as flash_algo_work
-from .CY8C64xx_SMIF import flash_algo as flash_algo_smif
+from .flash_algo_CY8C64xx_MAIN import flash_algo as flash_algo_main
+from .flash_algo_CY8C64xx_WORK import flash_algo as flash_algo_work
+from .flash_algo_CY8C64xx_SMIF import flash_algo as flash_algo_smif
 
 from .target_CY8C6xx7 import PSoC6FlashCommon
 from ...core import exceptions
