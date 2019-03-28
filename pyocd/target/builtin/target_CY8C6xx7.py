@@ -240,9 +240,6 @@ class CY8C6xx7(CoreSightTarget):
         core1.init()
         self.add_core(core0)
         self.add_core(core1)
-        region = self.memory_map.get_region_for_address(0x18000000)
-        region.flash.init(region.flash.Operation.VERIFY)
-        region.flash.cleanup()
 
 
 class CortexM_CY8C6xx7(CortexM):

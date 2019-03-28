@@ -905,7 +905,19 @@ class PyOCDCommander(object):
         count = self.convert_value(args[1])
         filename = args[2]
 
+        # CYPRESS PATCH START: Init flash region if not powered on boot
+        region = self.session.target.memory_map.get_region_for_address(addr)
+        flash_init_required =  region is not None and region.is_flash and not region.is_powered_on_boot and region.flash is not None
+        if flash_init_required:
+            region.flash.init(region.flash.Operation.VERIFY)
+        # CYPRESS PATCH END
+
         data = bytearray(self.target.aps[self.selected_ap].read_memory_block8(addr, count))
+
+        # CYPRESS PATCH START: Uninit flash region if was initialized above
+        if flash_init_required:
+            region.flash.cleanup()
+        # CYPRESS PATCH END
 
         with open(filename, 'wb') as f:
             f.write(data)
