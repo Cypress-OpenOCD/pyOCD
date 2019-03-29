@@ -413,17 +413,12 @@ flash_algo = {
     'pc_eraseAll': 0x0800008f,
 
     'static_base' : 0x08000000 + 0x00000020 + 0x00002d2c,
-    #'begin_stack' : 0x08004400,
-    'begin_stack' : 0x08045000,
-    #'begin_data' : 0x08000000 + 0x1000,
-	'begin_data' : 0x08000000 + 0x8000,
-    #'page_size' : 0x200,
+    'begin_stack' : 0x08048000,
+	'begin_data' : 0x08000000 + 0x4000,
     'page_size' : 0x40000,
     'analyzer_supported' : False,
     'analyzer_address' : 0x00000000,
-    #'page_buffers' : [0x08001000, 0x08001200],   # Enable double buffering
-    'page_buffers' : [0x08008000, ],   # Enable double buffering
-    #'min_program_length' : 0x200,
+    'page_buffers' : [0x08004000, ],   # Enable double buffering
     'min_program_length' : 0x40000,
 
     # Flash information
