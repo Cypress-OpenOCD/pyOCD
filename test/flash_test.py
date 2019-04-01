@@ -157,11 +157,6 @@ def flash_test(board_id):
             with open(binary_file, "rb") as f:
                 data = f.read()
             data = struct.unpack("%iB" % len(data), data)
-            
-            #ASHY
-            #check if data and more_data does not overlapps
-            if len(data) > (rom_size/2):
-                data = data[:(rom_size/2)]
                 
             unused = rom_size - len(data)
             
@@ -175,6 +170,10 @@ def flash_test(board_id):
 
             # Turn on extra checks for the next 4 tests
             flash.set_flash_algo_debug(True)
+            
+            # CYPRESS PATCH START: Check if init flash region required if not powered on boot
+            flash_init_required = rom_region.is_flash and not rom_region.is_powered_on_boot
+            # CYPRESS PATCH END
             
             print("\n------ Test Erased Value Check ------")
             d = [flash.region.erased_byte_value] * 128
@@ -195,7 +194,19 @@ def flash_test(board_id):
 
             print("\n------ Test Basic Page Erase ------")
             info = flash.flash_block(addr, data, False, False, progress_cb=print_progress())
+
+            # CYPRESS PATCH START: Init flash region if not powered on boot
+            if flash_init_required:
+                rom_region.flash.init(rom_region.flash.Operation.VERIFY)
+            # CYPRESS PATCH END
+            
             data_flashed = target.read_memory_block8(addr, size)
+
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.cleanup()
+            # CYPRESS PATCH END
+            
             if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
@@ -205,7 +216,19 @@ def flash_test(board_id):
 
             print("\n------ Test Basic Chip Erase ------")
             info = flash.flash_block(addr, data, False, True, progress_cb=print_progress())
+            
+            # CYPRESS PATCH START: Init flash region if not powered on boot
+            if flash_init_required:
+                rom_region.flash.init(rom_region.flash.Operation.VERIFY)
+            # CYPRESS PATCH END
+            
             data_flashed = target.read_memory_block8(addr, size)
+            
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.cleanup()
+            # CYPRESS PATCH END
+            
             if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_CHIP_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
@@ -215,7 +238,19 @@ def flash_test(board_id):
 
             print("\n------ Test Smart Page Erase ------")
             info = flash.flash_block(addr, data, True, False, progress_cb=print_progress())
+            
+            # CYPRESS PATCH START: Init flash region if not powered on boot
+            if flash_init_required:
+                rom_region.flash.init(rom_region.flash.Operation.VERIFY)
+            # CYPRESS PATCH END
+            
             data_flashed = target.read_memory_block8(addr, size)
+            
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.cleanup()
+            # CYPRESS PATCH END
+            
             if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
@@ -225,7 +260,19 @@ def flash_test(board_id):
 
             print("\n------ Test Smart Chip Erase ------")
             info = flash.flash_block(addr, data, True, True, progress_cb=print_progress())
+            
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.init(rom_region.flash.Operation.VERIFY)
+            # CYPRESS PATCH END
+            
             data_flashed = target.read_memory_block8(addr, size)
+            
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.cleanup()
+            # CYPRESS PATCH END
+            
             if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_CHIP_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
@@ -261,26 +308,50 @@ def flash_test(board_id):
             page_size = flash.get_page_info(addr).size
             new_data = [0x55] * page_size * 2
             info = flash.flash_block(addr, new_data, progress_cb=print_progress())
+            
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.init(rom_region.flash.Operation.VERIFY)
+            # CYPRESS PATCH END
+            
             data_flashed = target.read_memory_block8(addr, len(new_data))
+            
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.cleanup()
+            # CYPRESS PATCH END
+            
             if same(data_flashed, new_data) and info.program_type is FlashBuilder.FLASH_SECTOR_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
                 print("TEST FAILED")
             test_count += 1
-
+            
             print("\n------ Test Multiple Block Writes ------")
             addr = rom_start + rom_size // 2
             page_size = flash.get_page_info(addr).size
             more_data = [0x33] * page_size * 2
-            addr = (rom_start + rom_size // 2) + 1 #cover multiple pages
+            addr = (rom_start + rom_size // 2) + 1  # cover multiple pages
 
             fb = flash.get_flash_builder()
             fb.add_data(rom_start, data)
             fb.add_data(addr, more_data)
             fb.program(progress_cb=print_progress())
+
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.init(rom_region.flash.Operation.VERIFY)
+            # CYPRESS PATCH END
+
             data_flashed = target.read_memory_block8(rom_start, len(data))
             data_flashed_more = target.read_memory_block8(addr, len(more_data))
+
+            # CYPRESS PATCH START: Uninit flash region if was initialized above
+            if flash_init_required:
+                rom_region.flash.cleanup()
+            # CYPRESS PATCH END
+
             if same(data_flashed, data) and same(data_flashed_more, more_data):
                 print("TEST PASSED")
                 test_pass_count += 1

@@ -80,8 +80,25 @@ def same(d1, d2):
             return False
     return True
 
-def is_erased(d, errase_value = 0xFF):
+def is_erased(d, errase_value):
     return all((b == errase_value) for b in d)
+
+def cy_read_memory_block8(flash_region, target, addr, length):
+
+    # CYPRESS PATCH START: Init flash region if not powered on boot
+    flash_init_required = flash_region.is_flash and not flash_region.is_powered_on_boot
+    if flash_init_required:
+        flash_region.flash.init(flash_region.flash.Operation.VERIFY)
+    # CYPRESS PATCH END
+
+    data_flashed = target.read_memory_block8(addr, length)
+
+    # CYPRESS PATCH START: Uninit flash region if was initialized above
+    if flash_init_required:
+        flash_region.flash.cleanup()
+    # CYPRESS PATCH END
+    
+    return data_flashed
 
 def flash_test(board_id):
     test_pass_count = 0
@@ -137,11 +154,6 @@ def flash_test(board_id):
         target = board.target
         memory_map = board.target.get_memory_map()
 
-        errase_value = 0xFF
-        if board.target_type == "cy8c6xxa" or board.target_type == "cy8c6xx7" or board.target_type == "cy8c64xx_cm4" \
-            or board.target_type == "cy8c64xx_cm0":
-            errase_value = 0x00
-
         if board_id[:4] == "1901":
             test_kit = "CY8CPROTO-063-4343W"
         elif board_id[:4] == "1905":
@@ -157,12 +169,12 @@ def flash_test(board_id):
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
 
         programmer = loader.FileProgrammer(session, chip_erase=True)
-        print("Start program %s to main flash"% (hex_file))
+        print("Start program %s to main flash" % (hex_file))
         start = time()
         programmer.program(hex_file)
         stop = time()
         diff = stop - start
-        print("Elapsed time is %.3f seconds"% (diff))
+        print("Elapsed time is %.3f seconds" % (diff))
 
         binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.bin"]))
         with open(binary_file, "rb") as f:
@@ -184,12 +196,12 @@ def flash_test(board_id):
         bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.bin"]))
 
         programmer = loader.FileProgrammer(session, chip_erase=True)
-        print("Start program %s to main flash"% (bin_file))
+        print("Start program %s to main flash" % (bin_file))
         start = time()
         programmer.program(bin_file)
         stop = time()
         diff = stop - start
-        print("Elapsed time is %.3f seconds"% (diff))
+        print("Elapsed time is %.3f seconds" % (diff))
 
         with open(binary_file, "rb") as f:
             data = f.read()
@@ -210,12 +222,12 @@ def flash_test(board_id):
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_work.hex"]))
 
         programmer = loader.FileProgrammer(session, chip_erase=True)
-        print("Start program %s to work flash"% (hex_file))
+        print("Start program %s to work flash" % (hex_file))
         start = time()
         programmer.program(hex_file)
         stop = time()
         diff = stop - start
-        print("Elapsed time is %.3f seconds"% (diff))
+        print("Elapsed time is %.3f seconds" % (diff))
 
         binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_work.bin"]))
         with open(binary_file, "rb") as f:
@@ -247,12 +259,12 @@ def flash_test(board_id):
                     break
 
         programmer = loader.FileProgrammer(session, chip_erase=True)
-        print("Start program %s to work flash"% (bin_file))
+        print("Start program %s to work flash" % (bin_file))
         start = time()
-        programmer.program(bin_file, format ='bin', base_address =work_flash_region.start)
+        programmer.program(bin_file, format='bin', base_address=work_flash_region.start)
         stop = time()
         diff = stop - start
-        print("Elapsed time is %.3f seconds"% (diff))
+        print("Elapsed time is %.3f seconds" % (diff))
 
         with open(bin_file, "rb") as f:
             data = f.read()
@@ -268,53 +280,53 @@ def flash_test(board_id):
             print("TEST FAILED")
         test_count += 1
 
-        #print("\n------ Test Load ram bin ------")
-        #binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_ram.bin"]))
-        #with open(binary_file, "rb") as f:
-        #    data = f.read()
-        #data = struct.unpack("%iB" % len(data), data)
+        print("\n------ Test Load ram bin ------")
+        binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_ram.bin"]))
+        with open(binary_file, "rb") as f:
+            data = f.read()
+        data = struct.unpack("%iB" % len(data), data)
 
-        #ram_region = memory_map.get_first_region_of_type(MemoryType.RAM)
-        #if len(data) > ram_region.length:
-        #    data = data[:ram_region.length]
-        
-        #size = len(data)
+        ram_region = memory_map.get_first_region_of_type(MemoryType.RAM)
+        if len(data) > ram_region.length:
+           data = data[:ram_region.length]
 
-        #print("Start load %s to ram"% (binary_file))
-        #start = time()
-        #target.write_memory_block8(ram_region.start, data)
-        #stop = time()
-        #diff = stop - start
-        #print("Elapsed time is %.3f seconds"% (diff))
+        size = len(data)
 
-        #print("Start verification")
-        #data_read = target.read_memory_block8(ram_region.start, size)
-        #if same(data_read, data):
-        #    print("TEST PASSED")
-        #    test_pass_count += 1
-        #else:
-        #    print("TEST FAILED")
-        #test_count += 1
+        print("Start load %s to ram"% (binary_file))
+        start = time()
+        target.write_memory_block8(ram_region.start, data)
+        stop = time()
+        diff = stop - start
+        print("Elapsed time is %.3f seconds"% (diff))
 
-        #check if sflash defined
+        print("Start verification")
+        data_read = target.read_memory_block8(ram_region.start, size)
+        if same(data_read, data):
+           print("TEST PASSED")
+           test_pass_count += 1
+        else:
+           print("TEST FAILED")
+        test_count += 1
+
+        # check if sflash defined
         s_flash_region = None
         for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
             if flash_region.start == 0x16000000:
                 s_flash_region = flash_region
                 break
         if s_flash_region != None:
-            
+
             print("\n------ Test Program sflash hex ------")
             hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.hex"]))
             sflash_ofset = 0x800
 
             programmer = loader.FileProgrammer(session, chip_erase=True)
-            print("Start program %s to work flash"% (hex_file))
+            print("Start program %s to work flash" % (hex_file))
             start = time()
             programmer.program(hex_file)
             stop = time()
             diff = stop - start
-            print("Elapsed time is %.3f seconds"% (diff))
+            print("Elapsed time is %.3f seconds" % (diff))
 
             binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
             with open(binary_file, "rb") as f:
@@ -341,12 +353,12 @@ def flash_test(board_id):
                     break
 
             programmer = loader.FileProgrammer(session, chip_erase=True)
-            print("Start program %s to work flash"% (bin_file))
+            print("Start program %s to work flash" % (bin_file))
             start = time()
-            programmer.program(bin_file, format ='bin', base_address =s_flash_region.start + sflash_ofset)
+            programmer.program(bin_file, format='bin', base_address=s_flash_region.start + sflash_ofset)
             stop = time()
             diff = stop - start
-            print("Elapsed time is %.3f seconds"% (diff))
+            print("Elapsed time is %.3f seconds" % (diff))
 
             with open(bin_file, "rb") as f:
                 data = f.read()
@@ -362,62 +374,60 @@ def flash_test(board_id):
                 print("TEST FAILED")
             test_count += 1
 
-        #PROGTOOLS - 28
-        #for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
-        #    if flash_region.start == 0x18000000:
-        #        smif_flash_region = flash_region
+        for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+            if flash_region.start == 0x18000000:
+                smif_flash_region = flash_region
 
-        #       print("\n------ Test Program smif hex ------")
-        #        hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.hex"]))
+                print("\n------ Test Program smif bin ------")
+                bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.bin"]))
 
-        #       programmer = loader.FileProgrammer(session, chip_erase=True)
-        #        print("Start program %s to work flash"% (hex_file))
-        #        start = time()
-        #        programmer.program(hex_file)
-        #        stop = time()
-        #        diff = stop - start
-        #        print("Elapsed time is %.3f seconds"% (diff))
+                programmer = loader.FileProgrammer(session, chip_erase=True)
+                print("Start program %s to work flash" % (bin_file))
+                start = time()
+                programmer.program(bin_file, format='bin', base_address=smif_flash_region.start)
+                stop = time()
+                diff = stop - start
+                print("Elapsed time is %.3f seconds" % (diff))
 
-        #       binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0.bin"]))
-        #        with open(binary_file, "rb") as f:
-        #            data = f.read()
-        #        data = struct.unpack("%iB" % len(data), data)
+                with open(bin_file, "rb") as f:
+                    data = f.read()
+                data = struct.unpack("%iB" % len(data), data)
 
-        #        print("Start verification")
+                print("Start verification")
+                data_read = cy_read_memory_block8(flash_region, target, smif_flash_region.start, len(data))
 
-        #        data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
-        #        if same(data_flashed, data):
-        #            print("TEST PASSED")
-        #            test_pass_count += 1
-        #        else:
-        #            print("TEST FAILED")
-        #        test_count += 1
+                if same(data_read, data):
+                    print("TEST PASSED")
+                    test_pass_count += 1
+                else:
+                    print("TEST FAILED")
+                test_count += 1
 
-        #PROGTOOLS - 28
-        #        print("\n------ Test Program smif bin ------")
-        #        bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.bin"]))
+                print("\n------ Test Program smif hex ------")
+                hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.hex"]))
 
-        #        programmer = loader.FileProgrammer(session, chip_erase=True)
-        #        print("Start program %s to work flash"% (bin_file))
-        #        start = time()
-        #        programmer.program(bin_file, format ='bin', base_address =smif_flash_region.start)
-        #        stop = time()
-        #        diff = stop - start
-        #        print("Elapsed time is %.3f seconds"% (diff))
+                programmer = loader.FileProgrammer(session, chip_erase=True)
+                print("Start program %s to work flash" % (hex_file))
+                start = time()
+                programmer.program(hex_file)
+                stop = time()
+                diff = stop - start
+                print("Elapsed time is %.3f seconds" % (diff))
 
-        #        with open(bin_file, "rb") as f:
-        #            data = f.read()
-        #        data = struct.unpack("%iB" % len(data), data)
+                binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.bin"]))
+                with open(binary_file, "rb") as f:
+                    data = f.read()
+                data = struct.unpack("%iB" % len(data), data)
 
-        #        print("Start verification")
+                print("Start verification")
+                data_read = cy_read_memory_block8(flash_region, target, smif_flash_region.start, len(data))
 
-        #        data_flashed = target.read_memory_block8(smif_flash_region.start, smif_flash_region.length)
-        #        if same(data_flashed, data):
-        #            print("TEST PASSED")
-        #            test_pass_count += 1
-        #        else:
-        #            print("TEST FAILED")
-        #        test_count += 1
+                if same(data_read, data):
+                    print("TEST PASSED")
+                    test_pass_count += 1
+                else:
+                    print("TEST FAILED")
+                test_count += 1
 
         print("\n------ Test mass erase ------")
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
@@ -433,9 +443,9 @@ def flash_test(board_id):
             rom_start = rom_region.start
             rom_size = rom_region.length
 
-            data_read = target.read_memory_block8(rom_start, rom_size)
+            data_read = cy_read_memory_block8(flash_region, target, rom_start, rom_size)
 
-            if is_erased(data_read, errase_value):
+            if is_erased(data_read, rom_region.erased_byte_value):
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -476,8 +486,6 @@ def flash_test(board_id):
             test_pass_count += 1
         else:
             print("TEST FAILED")
-        # else:
-        #     print("TEST FAILED")
         test_count += 1
 
         print("\n------ Erase Program BlinkFull Verify Reset Run CM0 ------")
@@ -547,14 +555,15 @@ def flash_test(board_id):
         test_count += 1
 
         # Test each flash region separately.
-        for rom_region in memory_map.get_regions_of_type(MemoryType.FLASH):
-            if not rom_region.is_testable:
+        for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+            if not flash_region.is_testable:
                 continue
-            rom_start = rom_region.start
-            rom_size = rom_region.length
-            flash = rom_region.flash
+            rom_start = flash_region.start
+            rom_size = flash_region.length
+            flash = flash_region.flash
 
-            print("\n\n===== Testing flash region '%s' from 0x%08x to 0x%08x ====" % (rom_region.name, rom_region.start, rom_region.end))
+            print("\n\n===== Testing flash region '%s' from 0x%08x to 0x%08x ====" % (
+                flash_region.name, flash_region.start, flash_region.end))
 
             binary_file = os.path.join(parentdir, 'binaries', board.test_binary)
             with open(binary_file, "rb") as f:
@@ -572,21 +581,22 @@ def flash_test(board_id):
 
             # Turn on extra checks for the next 4 tests
             flash.set_flash_algo_debug(True)
-
             flash.flash_block(addr, data, False, False, progress_cb=print_progress())
-            data_flashed = target.read_memory_block8(addr, size)
-            if not same(data_flashed, data):
+
+            data_read = cy_read_memory_block8(flash_region, target, addr, size)
+
+            if not same(data_read, data):
                 print("FLASH REGION FAILED. TEST EXECUTION BLOCKED.")
                 assert "FLASH REGION FAILED. TEST EXECUTION BLOCKED."
 
             print("\n------ Test Flash Erase All ------")
-            flash.init(rom_region.flash.Operation.ERASE)
+            flash.init(flash_region.flash.Operation.ERASE)
             flash.erase_all()
             flash.cleanup()
 
-            data_read = target.read_memory_block8(rom_start, rom_size)
+            data_read = cy_read_memory_block8(flash_region, target, rom_start, rom_size)
 
-            if is_erased(data_read, errase_value):
+            if is_erased(data_read, flash_region.erased_byte_value):
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -595,15 +605,21 @@ def flash_test(board_id):
 
             print("\n------ Test Flash Erase Page ------")
             flash.flash_block(rom_start, data, False, False, progress_cb=print_progress())
-            data_read = target.read_memory_block8(rom_start, size)
+
+            data_read = cy_read_memory_block8(flash_region, target, rom_start, len(data))
 
             if same(data_read, data):
-                flash.init(rom_region.flash.Operation.ERASE)
+                flash.init(flash_region.flash.Operation.ERASE)
                 flash.erase_page(rom_start)
                 flash.cleanup()
-                data_read = target.read_memory_block8(rom_start, flash.min_program_length)
-                if is_erased(data_read, errase_value):
-                    data_read = target.read_memory_block8(rom_start + flash.min_program_length, size - flash.min_program_length)
+
+                data_read = cy_read_memory_block8(flash_region, target, rom_start, flash.min_program_length)
+
+                if is_erased(data_read, flash_region.erased_byte_value):
+
+                    data_read = cy_read_memory_block8(flash_region, target, rom_start + flash.min_program_length,
+                                                      size - flash.min_program_length)
+
                     if same(data_read, data[flash.min_program_length:]):
                         print("TEST PASSED")
                         test_pass_count += 1
@@ -626,8 +642,6 @@ def flash_test(board_id):
 
         result.passed = test_count == test_pass_count
         return result
-    
-    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='pyOCD flash test')
