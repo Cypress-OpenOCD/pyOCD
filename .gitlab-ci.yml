@@ -58,16 +58,17 @@ functional_test:
     # - python automated_test.py -b 190100008b131509028b131500000000000000002e127069
     - python automated_test.py -b 190100008b13151c028b131500000000000000002e127069
     
-#functional_test_mac1:
-#  stage: ftest
-#  tags:
-#  - PYOCD-TEST-MAC1014
-#  script:
-#    - virtualenv venv
-#    - source venv/bin/activate
-#    - pip install setuptools_scm
-#   - pip install setuptools_scm_git_archive
-#   - pip install -r dev-requirements.txt
-#    - pushd test
-#    - echo [INFO] Running functional tests
-#    - python3 automated_test.py
+functional_test_mac1:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1014
+  script:
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
+    - python3 automated_test.py
+    - python automated_test.py
