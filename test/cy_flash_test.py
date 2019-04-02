@@ -314,7 +314,7 @@ def flash_test(board_id):
             if flash_region.start == 0x16000000:
                 s_flash_region = flash_region
                 break
-        if s_flash_region != None:
+        if s_flash_region is not None:
 
             print("\n------ Test Program sflash hex ------")
             hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.hex"]))
