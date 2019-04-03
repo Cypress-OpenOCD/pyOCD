@@ -276,8 +276,12 @@ class CortexM_CY8C6xx7(CortexM):
                         break
                 except exceptions.TransferError:
                     self.flush()
-                    self._ap.dp.init()
-                    self._ap.dp.power_up_debug()
+                    try:
+                        self._ap.dp.init()
+                        self._ap.dp.power_up_debug()
+                    except exceptions.TransferError:
+                        self.flush()
+                    
                     sleep(0.01)
 
         self.notify(Notification(event=Target.EVENT_POST_RESET, source=self))
