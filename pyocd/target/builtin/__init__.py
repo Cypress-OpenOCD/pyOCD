@@ -156,4 +156,5 @@ BUILTIN_TARGETS = {
           'musca_a1' : target_musca_a1.MuscaA1,
           'musca_b1' : target_musca_b1.MuscaB1,
           'lpc55s69' : target_LPC55S69JBD100.LPC55S69JBD100,
+          'cy8c64xx_nosysap' : target_CY8C64xx.cy8c64xx_nosysap,
          }

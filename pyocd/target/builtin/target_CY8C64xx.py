@@ -20,6 +20,9 @@ from time import (sleep)
 from .flash_algo_CY8C64xx_MAIN import flash_algo as flash_algo_main
 from .flash_algo_CY8C64xx_WORK import flash_algo as flash_algo_work
 from .flash_algo_CY8C64xx_SMIF import flash_algo as flash_algo_smif
+from .target_CY8C6xx7 import CortexM_CY8C6xx7 as CortexM_CY8C6xx7_nosysap
+from .target_CY8C6xx7 import flash_algo_main as flash_algo_main_nosysap
+from .target_CY8C6xx7 import flash_algo_work as flash_algo_work_nosysap
 
 from .target_CY8C6xx7 import PSoC6FlashCommon
 from ...core import exceptions
@@ -113,6 +116,45 @@ class cy8c64xx(CoreSightTarget):
         region.flash.init(region.flash.Operation.VERIFY)
         region.flash.cleanup()
 
+class cy8c64xx_nosysap(CoreSightTarget):
+    VENDOR = "Cypress"
+    AP_NUM = None
+
+    memoryMap = MemoryMap(
+        RomRegion(start=0x00000000, length=0x20000),
+        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
+                    algo=flash_algo_main_nosysap),
+        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
+                    algo=flash_algo_work_nosysap),
+        RamRegion(start=0x08000000, length=0x20000)
+    )
+
+    def __init__(self, link):
+        super(cy8c64xx_nosysap, self).__init__(link, self.memoryMap)
+
+    def create_init_sequence(self):
+        seq = super(cy8c64xx_nosysap, self).create_init_sequence()
+        seq.replace_task('find_aps', self.find_aps)
+        seq.replace_task('create_cores', self.create_cy8c6xx7_core)
+        return seq
+
+    def find_aps(self):
+        if self.dp.valid_aps is not None:
+            return
+
+        self.dp.valid_aps = (1, 2,)
+
+    def create_cy8c6xx7_core(self):
+        core0 = CortexM_CY8C6xx7_nosysap(self, self.aps[1], self.memory_map, 0)
+        core1 = CortexM_CY8C6xx7_nosysap(self, self.aps[2], self.memory_map, 1)
+        core0.default_reset_type = self.ResetType.SW_SYSRESETREQ
+        core1.default_reset_type = self.ResetType.SW_SYSRESETREQ
+        self.aps[1].core = core0
+        self.aps[2].core = core1
+        core0.init()
+        core1.init()
+        self.add_core(core0)
+        self.add_core(core1)
 
 class cy8c64xx_cm0(cy8c64xx):
     def __init__(self, link):
