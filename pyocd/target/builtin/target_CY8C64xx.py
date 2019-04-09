@@ -20,7 +20,7 @@ from time import (sleep)
 from .flash_algo_CY8C64xx_MAIN import flash_algo as flash_algo_main
 from .flash_algo_CY8C64xx_WORK import flash_algo as flash_algo_work
 from .flash_algo_CY8C64xx_SMIF import flash_algo as flash_algo_smif
-from .target_CY8C6xx7 import CortexM_CY8C6xx7 as CortexM_CY8C6xx7_nosysap
+from .target_CY8C6xx7 import CortexM_CY8C6xx7
 from .target_CY8C6xx7 import flash_algo_main as flash_algo_main_nosysap
 from .target_CY8C6xx7 import flash_algo_work as flash_algo_work_nosysap
 
@@ -254,18 +254,37 @@ class cy8c64xx_cm4(cy8c64xx):
 
 
 ###################################################################################################################
-class CortexM_CY8C64xx_full(CortexM_CY8C64xx):
-    def reset_and_halt(self, reset_type=None):
-        logging.info("Acquiring target...")
+class CortexM_CY8C64xx_full(CortexM_CY8C6xx7):
+    def reinit_dap(self):
+        with Timeout(2.0) as t_o:
+            while t_o.check():
+                try:
+                    self._ap.dp.init()
+                    self._ap.dp.power_up_debug()
+                    self.flush()
+                    return
+                except exceptions.TransferError:
+                    self.flush()
 
+            if not t_o.check():
+                logging.error("Failed to initialize DAP")
+                
+    def reset_and_halt(self, reset_type=None):
         self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
+        try:
+            self.flush()
+        except exceptions.TransferError:
+            self.flush()
+
         self.reinit_dap()
         self.halt()
         self.wait_halted()
-        self.write_core_register('xpsr', CortexM.XPSR_THUMB)        
+        self.write_core_register('xpsr', CortexM.XPSR_THUMB)
+        self.flush()
 
-    def resume(self):
-        super(CortexM_CY8C64xx, self).resume()
+
+
+
 
 
 class cy8c64xx_cm4_full(CoreSightTarget):
@@ -302,4 +321,3 @@ class cy8c64xx_cm4_full(CoreSightTarget):
         self.aps[self.AP_NUM].core = core
         core.init()
         self.add_core(core)
-        region = self.memory_map.get_region_for_address(0x18000000)
