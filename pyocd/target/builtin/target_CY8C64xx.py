@@ -277,6 +277,12 @@ class CortexM_CY8C64xx_full(CortexM_CY8C6xx7):
             self.flush()
 
         self.reinit_dap()
+        
+        sleep(1)
+        if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
+            logging.warning("CM4 is sleeping, trying to wake it up...")
+            self.write32(0x40210080, 0x05fa0003)
+            
         self.halt()
         self.wait_halted()
         self.write_core_register('xpsr', CortexM.XPSR_THUMB)
