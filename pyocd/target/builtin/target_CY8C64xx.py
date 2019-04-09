@@ -107,7 +107,7 @@ class cy8c64xx(CoreSightTarget):
         self.dp.valid_aps = (self.AP_NUM,)
 
     def create_cy8c6xx7_core(self):
-        core = CortexM_CY8C6xx7(self, self.aps[self.AP_NUM], self.memory_map, 0)
+        core = CortexM_CY8C64xx(self, self.aps[self.AP_NUM], self.memory_map, 0)
         core.default_reset_type = self.ResetType.SW_SYSRESETREQ
         self.aps[self.AP_NUM].core = core
         core.init()
@@ -116,57 +116,8 @@ class cy8c64xx(CoreSightTarget):
         region.flash.init(region.flash.Operation.VERIFY)
         region.flash.cleanup()
 
-class cy8c64xx_nosysap(CoreSightTarget):
-    VENDOR = "Cypress"
-    AP_NUM = None
 
-    memoryMap = MemoryMap(
-        RomRegion(start=0x00000000, length=0x20000),
-        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
-                    algo=flash_algo_main_nosysap),
-        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
-                    algo=flash_algo_work_nosysap),
-        RamRegion(start=0x08000000, length=0x20000)
-    )
-
-    def __init__(self, link):
-        super(cy8c64xx_nosysap, self).__init__(link, self.memoryMap)
-
-    def create_init_sequence(self):
-        seq = super(cy8c64xx_nosysap, self).create_init_sequence()
-        seq.replace_task('find_aps', self.find_aps)
-        seq.replace_task('create_cores', self.create_cy8c6xx7_core)
-        return seq
-
-    def find_aps(self):
-        if self.dp.valid_aps is not None:
-            return
-
-        self.dp.valid_aps = (1, 2,)
-
-    def create_cy8c6xx7_core(self):
-        core0 = CortexM_CY8C6xx7_nosysap(self, self.aps[1], self.memory_map, 0)
-        core1 = CortexM_CY8C6xx7_nosysap(self, self.aps[2], self.memory_map, 1)
-        core0.default_reset_type = self.ResetType.SW_SYSRESETREQ
-        core1.default_reset_type = self.ResetType.SW_SYSRESETREQ
-        self.aps[1].core = core0
-        self.aps[2].core = core1
-        core0.init()
-        core1.init()
-        self.add_core(core0)
-        self.add_core(core1)
-
-class cy8c64xx_cm0(cy8c64xx):
-    def __init__(self, link):
-        super(cy8c64xx_cm0, self).__init__(link, 1)
-
-
-class cy8c64xx_cm4(cy8c64xx):
-    def __init__(self, link):
-        super(cy8c64xx_cm4, self).__init__(link, 2)
-
-
-class CortexM_CY8C6xx7(CortexM):
+class CortexM_CY8C64xx(CortexM):
     def reset(self, reset_type=None):
         self.notify(Notification(event=Target.EVENT_PRE_RESET, source=self))
 
@@ -229,7 +180,7 @@ class CortexM_CY8C6xx7(CortexM):
 
             if not t_o.check():
                 logging.error("Failed to initialize DAP")
-                
+
     def acquire(self):
         with Timeout(2.0) as t_o:
             while t_o.check():
@@ -242,20 +193,20 @@ class CortexM_CY8C6xx7(CortexM):
                     return
                 except exceptions.TransferError:
                     pass
-                
+
             if not t_o.check():
                 logging.error("Failed to enter test mode")
 
     def reset_and_halt(self, reset_type=None):
         logging.info("Acquiring target...")
-        
-        #self.reset(self.ResetType.SW_SYSRESETREQ)
+
+        # self.reset(self.ResetType.SW_SYSRESETREQ)
         self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
         try:
             self.flush()
         except exceptions.TransferError:
             pass
-        
+
         self.acquire()
 
         with Timeout(5.0) as t_o:
@@ -276,11 +227,79 @@ class CortexM_CY8C6xx7(CortexM):
         self.halt()
         self.wait_halted()
         self.write_core_register('xpsr', CortexM.XPSR_THUMB)
-    
+
     def resume(self):
         global is_flashing
         if not is_flashing:
             logging.info("Clearing TEST_MODE bit...")
             self.write32(0x40260100, 0x00000000)
 
-        super(CortexM_CY8C6xx7, self).resume()
+        super(CortexM_CY8C64xx, self).resume()
+
+
+class cy8c64xx_cm0(cy8c64xx):
+    def __init__(self, link):
+        super(cy8c64xx_cm0, self).__init__(link, 1)
+
+
+class cy8c64xx_cm4(cy8c64xx):
+    def __init__(self, link):
+        super(cy8c64xx_cm4, self).__init__(link, 2)
+
+
+
+
+
+
+
+
+###################################################################################################################
+class CortexM_CY8C64xx_full(CortexM_CY8C64xx):
+    def reset_and_halt(self, reset_type=None):
+        logging.info("Acquiring target...")
+
+        self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
+        self.reinit_dap()
+        self.halt()
+        self.wait_halted()
+        self.write_core_register('xpsr', CortexM.XPSR_THUMB)        
+
+    def resume(self):
+        super(CortexM_CY8C64xx, self).resume()
+
+
+class cy8c64xx_cm4_full(CoreSightTarget):
+    VENDOR = "Cypress"
+    AP_NUM = 2
+
+    memoryMap = MemoryMap(
+        RomRegion(start=0x00000000, length=0x20000),
+        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
+                    algo=flash_algo_main, flash_class=Flash_CY8C64xx_Main),
+        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
+                    algo=flash_algo_work, flash_class=Flash_CY8C64xx_Work),
+        RamRegion(start=0x08000000, length=0x20000)
+    )
+
+    def __init__(self, link):
+        super(cy8c64xx_cm4_full, self).__init__(link, self.memoryMap)
+
+    def create_init_sequence(self):
+        seq = super(cy8c64xx_cm4_full, self).create_init_sequence()
+        seq.replace_task('find_aps', self.find_aps)
+        seq.replace_task('create_cores', self.create_cy8c6xx7_core)
+        return seq
+
+    def find_aps(self):
+        if self.dp.valid_aps is not None:
+            return
+
+        self.dp.valid_aps = (self.AP_NUM,)
+
+    def create_cy8c6xx7_core(self):
+        core = CortexM_CY8C64xx_full(self, self.aps[self.AP_NUM], self.memory_map, 0)
+        core.default_reset_type = self.ResetType.SW_SYSRESETREQ
+        self.aps[self.AP_NUM].core = core
+        core.init()
+        self.add_core(core)
+        region = self.memory_map.get_region_for_address(0x18000000)
