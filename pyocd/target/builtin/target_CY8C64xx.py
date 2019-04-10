@@ -21,8 +21,6 @@ from .flash_algo_CY8C64xx_MAIN import flash_algo as flash_algo_main
 from .flash_algo_CY8C64xx_WORK import flash_algo as flash_algo_work
 from .flash_algo_CY8C64xx_SMIF import flash_algo as flash_algo_smif
 from .target_CY8C6xx7 import CortexM_CY8C6xx7
-from .target_CY8C6xx7 import flash_algo_main as flash_algo_main_nosysap
-from .target_CY8C6xx7 import flash_algo_work as flash_algo_work_nosysap
 
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
@@ -92,7 +90,7 @@ class cy8c64xx(CoreSightTarget):
                     program_page_weight=PROGRAM_PAGE_WEIGHT,
                     flash_class=Flash_CY8C64xx_Work),
         
-        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000,
+        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, page_size=0x1000,
                     is_boot_memory=False,
                     erased_byte_value=0xFF,
                     is_testable=False,
@@ -247,7 +245,7 @@ class CortexM_CY8C64xx(CortexM):
     def resume(self):
         global is_flashing
         if not is_flashing:
-            logging.info("Clearing TEST_MODE bit...")
+            #logging.info("Clearing TEST_MODE bit...")
             self.write32(0x40260100, 0x00000000)
 
         super(CortexM_CY8C64xx, self).resume()
