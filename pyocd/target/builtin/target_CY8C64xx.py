@@ -24,7 +24,6 @@ from .target_CY8C6xx7 import CortexM_CY8C6xx7
 from .target_CY8C6xx7 import flash_algo_main as flash_algo_main_nosysap
 from .target_CY8C6xx7 import flash_algo_work as flash_algo_work_nosysap
 
-from .target_CY8C6xx7 import PSoC6FlashCommon
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
@@ -36,7 +35,7 @@ from ...flash.flash import Flash
 
 is_flashing = False
 
-class PSoC6FlashSecure(PSoC6FlashCommon):
+class PSoC6FlashSecure(Flash):
     def __init__(self, target, flash_algo):
         super(PSoC6FlashSecure, self).__init__(target, flash_algo)
         
@@ -60,33 +59,50 @@ class Flash_CY8C64xx_Work(PSoC6FlashSecure):
         super(Flash_CY8C64xx_Work, self).__init__(target, flash_algo_work)
 
         
-class Flash_CY8C64xx_SMIF(Flash):
+class Flash_CY8C64xx_SMIF(PSoC6FlashSecure):
     def __init__(self, target):
         super(Flash_CY8C64xx_SMIF, self).__init__(target, flash_algo_smif)
-        
-    def init(self, operation, address=None, clock=0, reset=True):
-        global is_flashing
-        is_flashing = True
-        super(Flash_CY8C64xx_SMIF, self).init(operation, address, clock, reset)
 
-    def uninit(self):
-        global is_flashing
-        super(Flash_CY8C64xx_SMIF, self).uninit()
-        is_flashing = False
-        
-        
+ERASE_ALL_WEIGHT = 0.5 # Time it takes to perform a chip erase
+ERASE_SECTOR_WEIGHT = 0.05 # Time it takes to erase a page
+PROGRAM_PAGE_WEIGHT = 0.07 # Time it takes to program a page (Not including data transfer time)
+
 class cy8c64xx(CoreSightTarget):
     VENDOR = "Cypress"
     AP_NUM = None
 
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
-        FlashRegion(start=0x10000000, length=0xA0000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
-                    algo=flash_algo_main, flash_class=Flash_CY8C64xx_Main),
-        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
-                    algo=flash_algo_work, flash_class=Flash_CY8C64xx_Work),
-        FlashRegion(start=0x18000000, length=0x1000000, blocksize=0x10000, is_boot_memory=False, erased_byte_value=0xFF,
-                    is_testable=False, algo=flash_algo_smif, flash_class=Flash_CY8C64xx_SMIF),
+
+        FlashRegion(start=0x10000000, length=0xA0000, blocksize=0x200,
+                    is_boot_memory=True,
+                    erased_byte_value=0,
+                    algo=flash_algo_main,
+                    erase_all_weight=ERASE_ALL_WEIGHT,
+                    erase_sector_weight=ERASE_SECTOR_WEIGHT,
+                    program_page_weight=PROGRAM_PAGE_WEIGHT,
+                    flash_class=Flash_CY8C64xx_Main),
+        
+        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200,
+                    is_boot_memory=False,
+                    erased_byte_value=0,
+                    algo=flash_algo_work,
+                    erase_all_weight=ERASE_ALL_WEIGHT,
+                    erase_sector_weight=ERASE_SECTOR_WEIGHT,
+                    program_page_weight=PROGRAM_PAGE_WEIGHT,
+                    flash_class=Flash_CY8C64xx_Work),
+        
+        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000,
+                    is_boot_memory=False,
+                    erased_byte_value=0xFF,
+                    is_testable=False,
+                    is_powered_on_boot=False,
+                    algo=flash_algo_smif,
+                    erase_all_weight=140,
+                    erase_sector_weight=1,
+                    program_page_weight=1,
+                    flash_class=Flash_CY8C64xx_SMIF),
+
         RamRegion(start=0x08000000, length=0x20000)
     )
 
@@ -280,7 +296,7 @@ class CortexM_CY8C64xx_full(CortexM_CY8C6xx7):
         
         sleep(1)
         if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
-            logging.warning("CM4 is sleeping, trying to wake it up...")
+            logging.info("CM4 is sleeping, trying to wake it up...")
             self.write32(0x40210080, 0x05fa0003)
             
         self.halt()
@@ -299,10 +315,36 @@ class cy8c64xx_cm4_full(CoreSightTarget):
 
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
-        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200, is_boot_memory=True, erased_byte_value=0,
-                    algo=flash_algo_main, flash_class=Flash_CY8C64xx_Main),
-        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200, is_boot_memory=False, erased_byte_value=0,
-                    algo=flash_algo_work, flash_class=Flash_CY8C64xx_Work),
+
+        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200,
+                    is_boot_memory=True,
+                    erased_byte_value=0,
+                    algo=flash_algo_main,
+                    erase_all_weight=ERASE_ALL_WEIGHT,
+                    erase_sector_weight=ERASE_SECTOR_WEIGHT,
+                    program_page_weight=PROGRAM_PAGE_WEIGHT,
+                    flash_class=Flash_CY8C64xx_Main),
+
+        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200,
+                    is_boot_memory=False,
+                    erased_byte_value=0,
+                    algo=flash_algo_work,
+                    erase_all_weight=ERASE_ALL_WEIGHT,
+                    erase_sector_weight=ERASE_SECTOR_WEIGHT,
+                    program_page_weight=PROGRAM_PAGE_WEIGHT,
+                    flash_class=Flash_CY8C64xx_Work),
+
+        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000,
+                    is_boot_memory=False,
+                    erased_byte_value=0xFF,
+                    is_testable=False,
+                    is_powered_on_boot=False,
+                    algo=flash_algo_smif,
+                    erase_all_weight=140,
+                    erase_sector_weight=1,
+                    program_page_weight=1,
+                    flash_class=Flash_CY8C64xx_SMIF),
+
         RamRegion(start=0x08000000, length=0x20000)
     )
 

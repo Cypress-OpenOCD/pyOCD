@@ -253,6 +253,11 @@ class PyUSBv2(Interface):
         self.intf_number = None
         self.thread = None
 
+
+def match_cmsis_dap_interface_name(desc):
+    interface_name = usb.util.get_string(desc.device, desc.iInterface)
+    return (interface_name is not None) and ("CMSIS-DAP" in interface_name)
+
 class HasCmsisDapv2Interface(object):
     """! @brief CMSIS-DAPv2 match class to be used with usb.core.find"""
 
@@ -267,10 +272,6 @@ class HasCmsisDapv2Interface(object):
             return False
         
         try:
-            def match_cmsis_dap_interface_name(desc):
-                interface_name = usb.util.get_string(desc.device, desc.iInterface)
-                return (interface_name is not None) and ("CMSIS-DAP" in interface_name)
-
             config = dev.get_active_configuration()
             cmsis_dap_interface = usb.util.find_descriptor(config, custom_match=match_cmsis_dap_interface_name)
         except usb.core.USBError as error:

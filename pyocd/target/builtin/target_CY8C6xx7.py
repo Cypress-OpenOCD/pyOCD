@@ -178,18 +178,7 @@ flash_algo_sflash = {
 ERASE_ALL_WEIGHT = 0.5 # Time it takes to perform a chip erase
 ERASE_SECTOR_WEIGHT = 0.05 # Time it takes to erase a page
 PROGRAM_PAGE_WEIGHT = 0.07 # Time it takes to program a page (Not including data transfer time)
-
-class Flash_CY8C6xx7_SMIF(Flash):
-    def __init__(self, target):
-        super(Flash_CY8C6xx7_SMIF, self).__init__(target, flash_algo_smif)
-        
-    def init(self, operation, address=None, clock=0, reset=True):
-        super(Flash_CY8C6xx7_SMIF, self).init(operation, address, clock, reset)
-
-    def uninit(self):
-        super(Flash_CY8C6xx7_SMIF, self).uninit()
-        
-        
+    
 class CY8C6xx7(CoreSightTarget):
     VENDOR = "Cypress"
     
@@ -217,6 +206,15 @@ class CY8C6xx7(CoreSightTarget):
                                                         erase_all_weight=ERASE_ALL_WEIGHT,
                                                         erase_sector_weight=ERASE_SECTOR_WEIGHT,
                                                         program_page_weight=PROGRAM_PAGE_WEIGHT),
+        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000,
+                                                        is_boot_memory=False,
+                                                        erased_byte_value=0xFF,
+                                                        is_testable=False,
+                                                        is_powered_on_boot=False,
+                                                        algo=flash_algo_smif,
+                                                        erase_all_weight=140,
+                                                        erase_sector_weight=1,
+                                                        program_page_weight=1),
         RamRegion(start=0x08000000, length=0x10000)
     )
 
