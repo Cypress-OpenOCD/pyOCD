@@ -235,7 +235,7 @@ class CortexM_CY8C64xx(CortexM):
             logging.error("Failed to acquire the target (listen window not implemented?)")
 
         if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
-            logging.warning("CM4 is sleeping, trying to wake it up...")
+            logging.info("CM4 is sleeping, trying to wake it up...")
             self.write32(0x40210080, 0x05fa0003)
 
         self.halt()
