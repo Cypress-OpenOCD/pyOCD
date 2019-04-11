@@ -206,7 +206,7 @@ class CY8C6xx7(CoreSightTarget):
                                                         erase_all_weight=ERASE_ALL_WEIGHT,
                                                         erase_sector_weight=ERASE_SECTOR_WEIGHT,
                                                         program_page_weight=PROGRAM_PAGE_WEIGHT),
-        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000,
+        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, page_size=0x200,
                                                         is_boot_memory=False,
                                                         erased_byte_value=0xFF,
                                                         is_testable=False,
