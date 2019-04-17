@@ -17,7 +17,7 @@
 from ...flash.flash import Flash
 from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, MemoryMap)
-from ...debug.svd import SVDFile
+from ...debug.svd.loader import SVDFile
 
 # Chip erase takes a really long time.
 CHIP_ERASE_WEIGHT = 15.0
@@ -71,17 +71,20 @@ class STM32F429xG(CoreSightTarget):
     memoryMap = MemoryMap(
         FlashRegion( start=0x08000000, length=0x10000,  blocksize=0x4000,
                                                         is_boot_memory=True,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         FlashRegion( start=0x08010000, length=0x10000,  blocksize=0x10000,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         FlashRegion( start=0x08020000, length=0x60000,  blocksize=0x20000,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         RamRegion(   start=0x20000000, length=0x40000)
         )
 
     def __init__(self, transport):
         super(STM32F429xG, self).__init__(transport, self.memoryMap)
-        self._svd_location = SVDFile(vendor="STMicro", filename="STM32F429x.svd")
+        self._svd_location = SVDFile.from_builtin("STM32F429x.svd")
 
     def create_init_sequence(self):
         seq = super(STM32F429xG, self).create_init_sequence()
@@ -104,23 +107,29 @@ class STM32F429xI(CoreSightTarget):
     memoryMap = MemoryMap(
         FlashRegion( start=0x08000000, length=0x10000,  blocksize=0x4000,
                                                         is_boot_memory=True,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         FlashRegion( start=0x08010000, length=0x10000,  blocksize=0x10000,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         FlashRegion( start=0x08020000, length=0xe0000,  blocksize=0x20000,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         FlashRegion( start=0x08100000, length=0x10000,  blocksize=0x4000,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         FlashRegion( start=0x08110000, length=0x10000,  blocksize=0x10000,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         FlashRegion( start=0x08120000, length=0xe0000,  blocksize=0x20000,
-                                                        erase_all_weight=CHIP_ERASE_WEIGHT),
+                                                        erase_all_weight=CHIP_ERASE_WEIGHT,
+                                                        algo=FLASH_ALGO),
         RamRegion(   start=0x20000000, length=0x30000)
         )
 
     def __init__(self, transport):
         super(STM32F429xI, self).__init__(transport, self.memoryMap)
-        self._svd_location = SVDFile(vendor="STMicro", filename="STM32F429x.svd")
+        self._svd_location = SVDFile.from_builtin("STM32F429x.svd")
 
     def create_init_sequence(self):
         seq = super(STM32F429xI, self).create_init_sequence()

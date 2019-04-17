@@ -13,10 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from ...core.coresight_target import (SVDFile, CoreSightTarget)
+from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
 from ...coresight import ap
 from ...coresight.cortex_m import CortexM
+from ...debug.svd.loader import SVDFile
 
 SYSCON_DEVICE_ID0 = 0x400000FF8
 LPC54114J256 = 0x36454114
@@ -63,7 +64,8 @@ class LPC54114(CoreSightTarget):
     memoryMap = MemoryMap(
         FlashRegion(name='flash',   start=0,           length=0x40000,  is_boot_memory=True,
                                                                         blocksize=0x8000,
-                                                                        page_size=0x100),
+                                                                        page_size=0x100,
+                                                                        algo=FLASH_ALGO),
         RamRegion(  name='sramx',   start=0x04000000,  length=0x8000),
         RamRegion(  name='sram0',   start=0x20000000,  length=0x10000),
         RamRegion(  name='sram1',   start=0x20010000,  length=0x10000),
@@ -73,7 +75,7 @@ class LPC54114(CoreSightTarget):
     def __init__(self, link):
         super(LPC54114, self).__init__(link, self.memoryMap)
         self.ignoreReset = False
-        self._svd_location = SVDFile(vendor="NXP", filename="LPC54114_cm0plus.svd", is_local=False)
+        self._svd_location = SVDFile.from_builtin("LPC54114_cm4.xml")
 
     def reset_and_halt(self, reset_type=None, map_to_user=True):
         super(LPC54114, self).reset_and_halt(reset_type)
