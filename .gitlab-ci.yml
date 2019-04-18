@@ -38,7 +38,7 @@ code_analysis:
     - echo [INFO] Running analysys
     - python test/pylint_test.py
 
-unit_test_win:
+unit_test:
   stage: utest
   tags:
   - PYOCD-TEST-WIN1064
@@ -47,23 +47,6 @@ unit_test_win:
     - python -V               # Print out python version for debugging
     - virtualenv venv
     - call .\venv\Scripts\activate.bat
-    - echo [INFO] Installing python modules
-    - pip install setuptools_scm
-    - pip install setuptools_scm_git_archive
-    - pip install -r dev-requirements.txt
-    - cd
-    - echo [INFO] Running unit tests
-    - pytest
-    
-unit_test_ub:
-  stage: utest
-  tags:
-  - PYOCD-TEST-UB1804-1
-  script:
-    - set
-    - python -V               # Print out python version for debugging
-    - virtualenv venv
-    - source venv/bin/activate
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
