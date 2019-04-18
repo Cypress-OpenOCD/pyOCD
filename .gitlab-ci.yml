@@ -35,6 +35,7 @@ code_analysis:
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
+    - cd
     - echo [INFO] Running analysys
     - python test/pylint_test.py
 
@@ -63,7 +64,12 @@ basic_test_win:
     - unit_test
   script:
     - call .\venv\Scripts\activate.bat
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
     - pushd test
+    - cd
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
@@ -75,6 +81,11 @@ basic_test_ub:
     - unit_test
   script:
     - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
     - pushd test
+    - cd
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
