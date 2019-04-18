@@ -2,6 +2,7 @@ stages:
   - analysis
   - utest
   - btest
+  - ftest
 
 variables:
 # ENV_DIR: env
@@ -54,7 +55,7 @@ unit_test:
     - echo [INFO] Running unit tests
     - pytest
 
-basic_test_win:
+basic_test_win_py_3.7:
   stage: btest
   tags:
   - PYOCD-TEST-WIN1064
@@ -71,7 +72,7 @@ basic_test_win:
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
-basic_test_ub:
+basic_test_ub_py_2.7:
   stage: btest
   tags:
   - PYOCD-TEST-UB1804-1
@@ -87,3 +88,39 @@ basic_test_ub:
     - pushd test
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
+    
+functional_test_win_py_3.7:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-WIN1064
+  dependencies:
+    - basic_test_win_py_3.7
+  script:
+    - python -V               # Print out python version for debugging
+    - call .\venv\Scripts\activate.bat
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running basic tests
+    - python automated_test.py
+  when: manual
+  
+functional_test_ub_py_2.7:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-UB1804-1
+  dependencies:
+    - basic_test_ub_py_2.7
+  script:
+    - python -V               # Print out python version for debugging
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running basic tests
+    - python automated_test.py
+  when: manual
