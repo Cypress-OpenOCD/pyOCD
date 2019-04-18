@@ -1,7 +1,7 @@
 stages:
   - analysis
   - utest
-  - ftest
+  - btest
 
 variables:
 # ENV_DIR: env
@@ -25,14 +25,14 @@ cache:
 code_analysis:
   stage: analysis
   tags:
-  - CYPTEST-W1064-V1
+  - PYOCD-TEST-WIN1064
   script:
     - python test/pylint_test.py
 
-unit_test:
+unit_test_win:
   stage: utest
   tags:
-  - CYPTEST-W1064-V1
+  - PYOCD-TEST-WIN1064
   script:
     - set
     - python -V               # Print out python version for debugging
@@ -45,30 +45,42 @@ unit_test:
     - cd
     - echo [INFO] Running unit tests
     - pytest
-
-functional_test:
-  stage: ftest
+    
+unit_test_ub:
+  stage: utest
   tags:
-  - CYPTEST-W1064-V1
+  - PYOCD-TEST-UB1804-1
+  script:
+    - set
+    - python -V               # Print out python version for debugging
+    - virtualenv venv
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - cd
+    - echo [INFO] Running unit tests
+    - pytest
+
+basic_test_win:
+  stage: btest
+  tags:
+  - PYOCD-TEST-WIN1064
   dependencies:
     - unit_test
   script:
     - pushd test
-    - echo [INFO] Running functional tests
-    # - python automated_test.py -b 190100008b131509028b131500000000000000002e127069
-    - python automated_test.py -b 190100008b13151c028b131500000000000000002e127069
+    - echo [INFO] Running basic tests
+    - python cy_basic_test.py
     
-functional_test_mac1:
-  stage: ftest
+basic_test_ub:
+  stage: btest
   tags:
-  - PYOCD-TEST-MAC1014
+  - PYOCD-TEST-UB1804-1
+  dependencies:
+    - unit_test
   script:
-    - virtualenv venv
-    - source venv/bin/activate
-    - pip install setuptools_scm
-    - pip install setuptools_scm_git_archive
-    - pip install -r dev-requirements.txt
     - pushd test
-    - echo [INFO] Running functional tests
-    - python3 automated_test.py
-    - python automated_test.py
+    - echo [INFO] Running basic tests
+    - python cy_basic_test.py
