@@ -62,6 +62,7 @@ basic_test_win:
   dependencies:
     - unit_test
   script:
+    - call .\venv\Scripts\activate.bat
     - pushd test
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
@@ -73,6 +74,7 @@ basic_test_ub:
   dependencies:
     - unit_test
   script:
+    - source venv/bin/activate
     - pushd test
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
