@@ -203,6 +203,7 @@ class FileProgrammer(object):
             if ((section.type == 'SHT_PROGBITS')
                     and (section.flags & SH_FLAGS.SHF_ALLOC)
                     and (section.length > 0)
+                    and (section.region is not None)
                     and (section.region.is_flash)):
                 LOG.debug("Writing section %s", repr(section))
                 self._loader.add_data(section.start, section.data)
