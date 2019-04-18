@@ -35,7 +35,6 @@ code_analysis:
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
-    - cd
     - echo [INFO] Running analysys
     - python test/pylint_test.py
 
