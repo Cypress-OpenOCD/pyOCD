@@ -19,7 +19,7 @@ from ..family.flash_kinetis import Flash_Kinetis
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
 from ...coresight import ap
 from ...coresight.cortex_m import CortexM
-from ...debug.svd import SVDFile
+from ...debug.svd.loader import SVDFile
 import logging
 import os.path
 from time import (time, sleep)
@@ -163,14 +163,16 @@ class KL28x(Kinetis):
 
     singleMap = MemoryMap(
         FlashRegion(name='flash', start=0, length=0x80000, blocksize=0x800, is_boot_memory=True,
-            flash_class=Flash_kl28z),
+            flash_class=Flash_kl28z,
+            algo=FLASH_ALGO),
         RamRegion(name='ram', start=0x1fff8000, length=0x20000),
         RamRegion(name='usb ram', start=0x40100000, length=0x800)
         )
 
     dualMap = MemoryMap(
         FlashRegion(name='flash', start=0, length=0x80000, blocksize=0x800, is_boot_memory=True,
-            flash_class=Flash_kl28z),
+            flash_class=Flash_kl28z,
+            algo=FLASH_ALGO),
         RomRegion(name='core1 imem alias', start=0x1d200000, length=0x40000),
         RamRegion(name='core0 ram', start=0x1fffa000, length=0x18000),
         RomRegion(name='core1 imem', start=0x2d200000, length=0x40000),
@@ -182,7 +184,7 @@ class KL28x(Kinetis):
         super(KL28x, self).__init__(link, self.singleMap)
         self.is_dual_core = False
 
-        self._svd_location = SVDFile(vendor="Freescale", filename="MKL28T7_CORE0.svd", is_local=False)
+        self._svd_location = SVDFile.from_builtin("MKL28T7_CORE0.svd")
 
     def create_init_sequence(self):
         seq = super(KL28x, self).create_init_sequence()

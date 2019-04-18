@@ -15,8 +15,9 @@
 # limitations under the License.
 
 from ...flash.flash import Flash
-from ...core.coresight_target import (SVDFile, CoreSightTarget)
+from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, MemoryMap)
+from ...debug.svd.loader import SVDFile
 
 FLASH_ALGO = { 'load_address' : 0x10000000,
                'instructions' : [
@@ -54,13 +55,14 @@ class LPC11U24(CoreSightTarget):
         FlashRegion(    start=0,           length=0x8000,   is_boot_memory=True,
                                                             blocksize=0x1000,
                                                             page_size=0x400,
-                                                            phrase_size=256),
+                                                            phrase_size=256,
+                                                            algo=FLASH_ALGO),
         RamRegion(      start=0x10000000,  length=0x1000)
         )
 
     def __init__(self, link):
         super(LPC11U24, self).__init__(link, self.memoryMap)
-        self._svd_location = SVDFile(vendor="NXP", filename="LPC11Uxx_v7.svd", is_local=False)
+        self._svd_location = SVDFile.from_builtin("LPC11Uxx_v7.svd")
 
     def reset_and_halt(self, reset_type=None, map_to_user=True):
         super(LPC11U24, self).reset_and_halt(reset_type)

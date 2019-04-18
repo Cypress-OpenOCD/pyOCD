@@ -39,10 +39,18 @@ class PSoC6FlashSecure(Flash):
         
     def init(self, operation, address=None, clock=0, reset=True):
         global is_flashing
+        
+        if self._active_operation != operation and self._active_operation is not None:
+            self.uninit()
+            
         is_flashing = True
         super(PSoC6FlashSecure, self).init(operation, address, clock, reset)
+        is_flashing = True
 
     def uninit(self):
+        if self._active_operation is None:
+            return
+
         global is_flashing
         super(PSoC6FlashSecure, self).uninit()
         is_flashing = False
@@ -126,9 +134,6 @@ class cy8c64xx(CoreSightTarget):
         self.aps[self.AP_NUM].core = core
         core.init()
         self.add_core(core)
-        region = self.memory_map.get_region_for_address(0x18000000)
-        region.flash.init(region.flash.Operation.VERIFY)
-        region.flash.cleanup()
 
 
 class CortexM_CY8C64xx(CortexM):
@@ -223,7 +228,7 @@ class CortexM_CY8C64xx(CortexM):
 
         self.acquire()
 
-        with Timeout(5.0) as t_o:
+        with Timeout(25.0) as t_o:
             while t_o.check():
                 try:
                     if self.read32(0x4023004C) == 0x12344321:
@@ -245,7 +250,7 @@ class CortexM_CY8C64xx(CortexM):
     def resume(self):
         global is_flashing
         if not is_flashing:
-            #logging.info("Clearing TEST_MODE bit...")
+            logging.info("Clearing TEST_MODE bit...")
             self.write32(0x40260100, 0x00000000)
 
         super(CortexM_CY8C64xx, self).resume()
