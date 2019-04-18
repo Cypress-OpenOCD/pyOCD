@@ -68,7 +68,7 @@ basic_test_win:
   tags:
   - PYOCD-TEST-WIN1064
   dependencies:
-    - unit_test
+    - unit_test_win
   script:
     - pushd test
     - echo [INFO] Running basic tests
@@ -79,7 +79,7 @@ basic_test_ub:
   tags:
   - PYOCD-TEST-UB1804-1
   dependencies:
-    - unit_test
+    - unit_test_ub
   script:
     - pushd test
     - echo [INFO] Running basic tests
