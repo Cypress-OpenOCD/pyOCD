@@ -51,7 +51,6 @@ unit_test:
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
-    - cd
     - echo [INFO] Running unit tests
     - pytest
 
@@ -68,7 +67,6 @@ basic_test_win:
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
     - pushd test
-    - cd
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
@@ -85,6 +83,5 @@ basic_test_ub:
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
     - pushd test
-    - cd
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
