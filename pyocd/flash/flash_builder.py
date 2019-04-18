@@ -779,7 +779,11 @@ class FlashBuilder(object):
                 else:
                     data = []
                     offset = 0
-                assert len(page.data) == page.size
+
+                if len(page.data) != page.size:
+                    page.data.extend(self.flash.target.read_memory_block8(page.addr + len(page.data),
+                      page.size - len(page.data)))
+
                 data.extend(self.flash.target.read_memory_block8(page.addr + offset,
                                                                     page.size - offset))
                 page.same = same(page.data, data)

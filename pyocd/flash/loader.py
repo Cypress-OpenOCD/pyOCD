@@ -26,7 +26,7 @@ import errno
 from .flash_builder import (FlashBuilder, get_page_count, get_sector_count)
 from ..core.memory_map import MemoryType
 from ..utility.progress import print_progress
-from ..debug.elf.elf import (ELFBinaryFile, SH_FLAGS)
+from elftools.elf.elffile import ELFFile
 from ..utility.compatibility import FileNotFoundError_
 
 LOG = logging.getLogger(__name__)
@@ -198,17 +198,23 @@ class FileProgrammer(object):
 
     # ELF format
     def _program_elf(self, file_obj, **kwargs):
-        elf = ELFBinaryFile(file_obj, self._session.target.memory_map)
-        for section in elf.sections:
-            if ((section.type == 'SHT_PROGBITS')
-                    and (section.flags & SH_FLAGS.SHF_ALLOC)
-                    and (section.length > 0)
-                    and (section.region is not None)
-                    and (section.region.is_flash)):
-                LOG.debug("Writing section %s", repr(section))
-                self._loader.add_data(section.start, section.data)
-            else:
-                LOG.debug("Skipping section %s", repr(section))
+        elf = ELFFile(file_obj)
+        for segment in elf.iter_segments():
+            for section in elf.iter_sections():
+                if not section.is_null() and segment.section_in_segment(section):
+                    if section['sh_type'] == 'SHT_PROGBITS':
+                        addr = segment['p_paddr'] + section['sh_offset'] - segment['p_offset']
+                        data = map(ord, section.data())
+                        LOG.debug("Writing section %s LMA:0x%08x, VMA:0x%08x", section.name, 
+                                  segment['p_paddr'], segment['p_vaddr'])
+                        try:
+                            self._loader.add_data(addr, data)
+                        except ValueError as e:
+                            LOG.warning("Failed to add data chunk: %s", e)
+                    else:
+                        LOG.debug("Skipping section %s LMA:0x%08x, VMA:0x%08x", section.name, 
+                                  segment['p_paddr'], segment['p_vaddr'])
+                        
 
 class FlashEraser(object):
     """! @brief Class that manages high level flash erasing.
