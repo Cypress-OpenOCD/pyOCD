@@ -61,6 +61,7 @@ basic_test_win:
   dependencies:
     - unit_test
   script:
+    - python -V               # Print out python version for debugging
     - call .\venv\Scripts\activate.bat
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -77,6 +78,7 @@ basic_test_ub:
   dependencies:
     - unit_test
   script:
+    - python -V               # Print out python version for debugging
     - source venv/bin/activate
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
