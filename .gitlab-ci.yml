@@ -25,7 +25,7 @@ cache:
 code_analysis:
   stage: analysis
   tags:
-  - PYOCD-TEST-WIN1064
+  - PYOCD-TEST-UB1804-1
   script:
     - python test/pylint_test.py
 
