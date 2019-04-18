@@ -76,8 +76,8 @@ basic_test_win:
   stage: btest
   tags:
   - PYOCD-TEST-WIN1064
-  dependencies:
-    - unit_test_win
+  #dependencies:
+  #  - unit_test_win
   script:
     - pushd test
     - echo [INFO] Running basic tests
@@ -87,8 +87,8 @@ basic_test_ub:
   stage: btest
   tags:
   - PYOCD-TEST-UB1804-1
-  dependencies:
-    - unit_test_ub
+  #dependencies:
+  #  - unit_test_ub
   script:
     - pushd test
     - echo [INFO] Running basic tests
