@@ -219,8 +219,8 @@ class CortexM_CY8C64xx(CortexM):
     def reset_and_halt(self, reset_type=None):
         logging.info("Acquiring target...")
 
-        # self.reset(self.ResetType.SW_SYSRESETREQ)
-        self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
+        self.reset(self.ResetType.SW_SYSRESETREQ)
+        #self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
         try:
             self.flush()
         except exceptions.TransferError:
