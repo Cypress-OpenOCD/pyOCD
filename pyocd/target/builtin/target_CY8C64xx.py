@@ -80,7 +80,7 @@ class cy8c64xx(CoreSightTarget):
     memoryMap = MemoryMap(
         RomRegion(start=0x00000000, length=0x20000),
 
-        FlashRegion(start=0x10000000, length=0xA0000, blocksize=0x200,
+        FlashRegion(start=0x10000000, length=0xD0000, blocksize=0x200,
                     is_boot_memory=True,
                     erased_byte_value=0,
                     algo=flash_algo_main,
