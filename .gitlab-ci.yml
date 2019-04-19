@@ -55,7 +55,7 @@ unit_test:
     - echo [INFO] Running unit tests
     - pytest
 
-basic_test_win_py_3.7:
+win_py_3.7_basic_test:
   stage: btest
   tags:
   - PYOCD-TEST-WIN1064
@@ -72,7 +72,7 @@ basic_test_win_py_3.7:
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
-basic_test_ub_py_2.7:
+ub_py_2.7_basic_test:
   stage: btest
   tags:
   - PYOCD-TEST-UB1804-1
@@ -89,12 +89,12 @@ basic_test_ub_py_2.7:
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
-functional_test_win_py_3.7:
+win10_py_3.7_functional_test:
   stage: ftest
   tags:
   - PYOCD-TEST-WIN1064
   dependencies:
-    - basic_test_win_py_3.7
+    - win_py_3.7_basic_test
   script:
     - python -V               # Print out python version for debugging
     - call .\venv\Scripts\activate.bat
@@ -103,16 +103,68 @@ functional_test_win_py_3.7:
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
     - pushd test
-    - echo [INFO] Running basic tests
+    - echo [INFO] Running functional tests
+    - python automated_test.py
+  when: manual
+
+win7_py_2.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-WIN732
+  dependencies:
+    - win_py_3.7_basic_test
+  script:
+    - python -V               # Print out python version for debugging
+    - call .\venv\Scripts\activate.bat
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
+    - python automated_test.py
+  when: manual
+
+ub_py_2.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-UB1804-1
+  dependencies:
+    - ub_py_2.7_basic_test
+  script:
+    - python -V               # Print out python version for debugging
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
     - python automated_test.py
   when: manual
   
-functional_test_ub_py_2.7:
+ub_py_3.7_functional_test:
   stage: ftest
   tags:
-  - PYOCD-TEST-UB1804-1
+  - PYOCD-TEST-UB1804
   dependencies:
-    - basic_test_ub_py_2.7
+    - ub_py_2.7_basic_test
+  script:
+    - python3 -V               # Print out python version for debugging
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
+    - python3 automated_test.py
+  when: manual
+  
+mac1013_py_2.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1013
   script:
     - python -V               # Print out python version for debugging
     - source venv/bin/activate
@@ -121,6 +173,22 @@ functional_test_ub_py_2.7:
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
     - pushd test
-    - echo [INFO] Running basic tests
+    - echo [INFO] Running functional tests
     - python automated_test.py
+  when: manual
+  
+mac1014_py_3.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1014
+  script:
+    - python3 -V               # Print out python version for debugging
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
+    - python3 automated_test.py
   when: manual
