@@ -61,7 +61,8 @@ class GdbTestResult(TestResult):
 class GdbTest(Test):
     def __init__(self):
         super(self.__class__, self).__init__("Gdb Test", test_gdb)
-        self.n = 0
+        #ASHY temp fix
+        self.n = 5
 
     def print_perf_info(self, result_list, output_file=None):
         pass
