@@ -159,9 +159,9 @@ ub_py_3.7_functional_test:
     - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
-    - pip install setuptools_scm
-    - pip install setuptools_scm_git_archive
-    - pip install -r dev-requirements.txt
+    - pip3 install setuptools_scm
+    - pip3 install setuptools_scm_git_archive
+    - pip3 install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
     - python3 automated_test.py
