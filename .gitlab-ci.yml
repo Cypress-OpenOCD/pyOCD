@@ -63,6 +63,7 @@ win_py_3.7_basic_test:
     - unit_test
   script:
     - python -V               # Print out python version for debugging
+    - virtualenv venv
     - call .\venv\Scripts\activate.bat
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -80,6 +81,7 @@ ub_py_2.7_basic_test:
     - unit_test
   script:
     - python -V               # Print out python version for debugging
+    - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -97,6 +99,7 @@ win10_py_3.7_functional_test:
     - win_py_3.7_basic_test
   script:
     - python -V               # Print out python version for debugging
+    - virtualenv venv
     - call .\venv\Scripts\activate.bat
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -115,6 +118,7 @@ win7_py_2.7_functional_test:
     - win_py_3.7_basic_test
   script:
     - python -V               # Print out python version for debugging
+    - virtualenv venv
     - call .\venv\Scripts\activate.bat
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -133,6 +137,7 @@ ub_py_2.7_functional_test:
     - ub_py_2.7_basic_test
   script:
     - python -V               # Print out python version for debugging
+    - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -151,6 +156,7 @@ ub_py_3.7_functional_test:
     - ub_py_2.7_basic_test
   script:
     - python3 -V               # Print out python version for debugging
+    - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -167,6 +173,7 @@ mac1013_py_2.7_functional_test:
   - PYOCD-TEST-MAC1013
   script:
     - python -V               # Print out python version for debugging
+    - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
@@ -183,6 +190,7 @@ mac1014_py_3.7_functional_test:
   - PYOCD-TEST-MAC1014
   script:
     - python3 -V               # Print out python version for debugging
+    - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
