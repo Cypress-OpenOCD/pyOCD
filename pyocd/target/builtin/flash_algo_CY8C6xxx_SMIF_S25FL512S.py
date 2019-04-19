@@ -16,7 +16,7 @@
 """
 
 
-# 3rdparty_flashloaders build #20
+# 3rdparty_flashloaders 2.2.0.20
 flash_algo = {
     'load_address' : 0x08000000,
 
