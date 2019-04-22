@@ -610,7 +610,7 @@ def flash_test(board_id):
 
             if same(data_read, data):
                 flash.init(flash_region.flash.Operation.ERASE)
-                flash.erase_page(rom_start)
+                flash.erase_sector(rom_start)
                 flash.cleanup()
 
                 data_read = cy_read_memory_block8(flash_region, target, rom_start, flash.min_program_length)
