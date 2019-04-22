@@ -115,7 +115,7 @@ def flash_test(board_id):
     test_count += 1
 
     print("\n------ Test List targets ------")
-    obj = ListGenerator.list_targets(None)
+    obj = ListGenerator.list_targets()
     if {'name': 'cy8c6xxa', 'vendor': 'Cypress', 'part_families': [], 'part_number': 'CY8C6xxA'} in obj['targets'] and \
         {'name': 'cy8c6xx7', 'vendor': 'Cypress', 'part_families': [], 'part_number': 'CY8C6xx7'} in obj['targets']:
         print("TEST PASSED")
