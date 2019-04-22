@@ -63,7 +63,7 @@ test_list = [
              FlashTest(),
              FlashLoaderTest(),
              #DebugContextTest(),
-             GdbTest(),
+             #GdbTest(),
              CyFlashTest(),
              ]
 
