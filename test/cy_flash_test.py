@@ -116,8 +116,12 @@ def flash_test(board_id):
 
     print("\n------ Test List targets ------")
     obj = ListGenerator.list_targets()
-    if {'name': 'cy8c6xxa', 'vendor': 'Cypress', 'part_families': [], 'part_number': 'CY8C6xxA'} in obj['targets'] and \
-        {'name': 'cy8c6xx7', 'vendor': 'Cypress', 'part_families': [], 'part_number': 'CY8C6xx7'} in obj['targets']:
+    cy8c6xxa_target = {'source': 'builtin', 'part_number': 'CY8C6xxA', 'part_families': [], 'vendor': 'Cypress', \
+                       'name': 'cy8c6xxa'}
+    cy8c6xx7_target = {'source': 'builtin', 'part_number': 'CY8C6xx7', 'part_families': [], 'vendor': 'Cypress', \
+                       'name': 'cy8c6xx7'}
+    
+    if cy8c6xxa_target in obj['targets'] and cy8c6xx7_target in obj['targets']:
         print("TEST PASSED")
         test_pass_count += 1
     else:
@@ -382,7 +386,7 @@ def flash_test(board_id):
                 bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.bin"]))
 
                 programmer = loader.FileProgrammer(session, chip_erase=True)
-                print("Start program %s to work flash" % (bin_file))
+                print("Start program %s to flash" % (bin_file))
                 start = time()
                 programmer.program(bin_file, format='bin', base_address=smif_flash_region.start)
                 stop = time()
