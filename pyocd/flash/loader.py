@@ -22,6 +22,7 @@ from intelhex import IntelHex
 from enum import Enum
 import six
 import errno
+import sys
 
 from .flash_builder import (FlashBuilder, get_page_count, get_sector_count)
 from ..core.memory_map import MemoryType
@@ -204,7 +205,10 @@ class FileProgrammer(object):
                 if not section.is_null() and segment.section_in_segment(section):
                     if section['sh_type'] == 'SHT_PROGBITS':
                         addr = segment['p_paddr'] + section['sh_offset'] - segment['p_offset']
-                        data = map(ord, section.data())
+                        if sys.version_info[0] == 3:
+                            data = section.data()
+                        else:
+                            data = map(ord, section.data())
                         LOG.debug("Writing section %s LMA:0x%08x, VMA:0x%08x", section.name, 
                                   segment['p_paddr'], segment['p_vaddr'])
                         try:
