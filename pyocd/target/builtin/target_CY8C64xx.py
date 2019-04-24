@@ -31,6 +31,9 @@ from ...utility.notification import Notification
 from ...utility.timeout import Timeout
 from ...flash.flash import Flash
 
+
+LOG = logging.getLogger(__name__)
+
 is_flashing = False
 
 class PSoC6FlashSecure(Flash):
@@ -198,7 +201,7 @@ class CortexM_CY8C64xx(CortexM):
                     self.flush()
 
             if not t_o.check():
-                logging.error("Failed to initialize DAP")
+                LOG.error("Failed to initialize DAP")
 
     def acquire(self):
         with Timeout(2.0) as t_o:
@@ -214,10 +217,10 @@ class CortexM_CY8C64xx(CortexM):
                     pass
 
             if not t_o.check():
-                logging.error("Failed to enter test mode")
+                LOG.warning("Failed to enter test mode")
 
     def reset_and_halt(self, reset_type=None):
-        logging.info("Acquiring target...")
+        LOG.info("Acquiring target...")
 
         self.reset(self.ResetType.SW_SYSRESETREQ)
         #self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
@@ -237,10 +240,10 @@ class CortexM_CY8C64xx(CortexM):
                     pass
 
         if not t_o.check():
-            logging.error("Failed to acquire the target (listen window not implemented?)")
+            LOG.warning("Failed to acquire the target (listen window not implemented?)")
 
         if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
-            logging.info("CM4 is sleeping, trying to wake it up...")
+            LOG.debug("CM4 is sleeping, trying to wake it up...")
             self.write32(0x40210080, 0x05fa0003)
 
         self.halt()
@@ -250,7 +253,7 @@ class CortexM_CY8C64xx(CortexM):
     def resume(self):
         global is_flashing
         if not is_flashing:
-            logging.info("Clearing TEST_MODE bit...")
+            LOG.info("Clearing TEST_MODE bit...")
             self.write32(0x40260100, 0x00000000)
 
         super(CortexM_CY8C64xx, self).resume()
@@ -286,7 +289,7 @@ class CortexM_CY8C64xx_full(CortexM_CY8C6xx7):
                     self.flush()
 
             if not t_o.check():
-                logging.error("Failed to initialize DAP")
+                LOG.error("Failed to initialize DAP")
                 
     def reset_and_halt(self, reset_type=None):
         self.write_memory(CortexM.NVIC_AIRCR, CortexM.NVIC_AIRCR_VECTKEY | CortexM.NVIC_AIRCR_SYSRESETREQ)
@@ -299,7 +302,7 @@ class CortexM_CY8C64xx_full(CortexM_CY8C6xx7):
         
         sleep(1)
         if self.ap.ap_num == 2 and self.read32(0x40210080) & 3 != 3:
-            logging.info("CM4 is sleeping, trying to wake it up...")
+            LOG.debug("CM4 is sleeping, trying to wake it up...")
             self.write32(0x40210080, 0x05fa0003)
             
         self.halt()
