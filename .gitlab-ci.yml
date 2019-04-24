@@ -181,7 +181,7 @@ mac1013_py_2.7_functional_test:
     - pip install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
-    - python automated_test.py
+    - python automated_test.py -b 19071301f3041b1202f3041b00000000000000002e127069
   when: manual
   
 mac1014_py_3.7_functional_test:
@@ -198,5 +198,5 @@ mac1014_py_3.7_functional_test:
     - pip install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
-    - python3 automated_test.py
+    - python3 automated_test.py -b 19071301f3041b0b02f3041b00000000000000002e127069
   when: manual
