@@ -19,7 +19,7 @@ from time import (sleep)
 
 from .flash_algo_CY8C64xx_MAIN import flash_algo as flash_algo_main
 from .flash_algo_CY8C64xx_WORK import flash_algo as flash_algo_work
-from .flash_algo_CY8C64xx_SMIF import flash_algo as flash_algo_smif
+from .flash_algo_CY8C64xx_STATIC_SMIF import flash_algo as flash_algo_smif
 from .target_CY8C6xx7 import CortexM_CY8C6xx7
 
 from ...core import exceptions
@@ -101,7 +101,7 @@ class cy8c64xx(CoreSightTarget):
                     program_page_weight=PROGRAM_PAGE_WEIGHT,
                     flash_class=Flash_CY8C64xx_Work),
         
-        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, page_size=0x1000,
+        FlashRegion(start=0x18000000, length=0x1000000, blocksize=0x40000, page_size=0x1000,
                     is_boot_memory=False,
                     erased_byte_value=0xFF,
                     is_testable=False,
@@ -340,7 +340,7 @@ class cy8c64xx_cm4_full(CoreSightTarget):
                     program_page_weight=PROGRAM_PAGE_WEIGHT,
                     flash_class=Flash_CY8C64xx_Work),
 
-        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000,
+        FlashRegion(start=0x18000000, length=0x1000000, blocksize=0x40000, page_size=0x1000,
                     is_boot_memory=False,
                     erased_byte_value=0xFF,
                     is_testable=False,

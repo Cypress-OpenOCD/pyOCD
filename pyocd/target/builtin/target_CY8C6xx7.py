@@ -16,8 +16,7 @@
 import logging
 from time import (time, sleep)
 
-from .flash_algo_CY8C6xxx_SMIF_S25FL512S import flash_algo as flash_algo_smif
-
+from .flash_algo_CY8C6xx7_STATIC_SMIF import flash_algo as flash_algo_smif
 from ...core import exceptions
 from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
@@ -206,7 +205,7 @@ class CY8C6xx7(CoreSightTarget):
                                                         erase_all_weight=ERASE_ALL_WEIGHT,
                                                         erase_sector_weight=ERASE_SECTOR_WEIGHT,
                                                         program_page_weight=PROGRAM_PAGE_WEIGHT),
-        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, page_size=0x200,
+        FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, page_size=0x1000,
                                                         is_boot_memory=False,
                                                         erased_byte_value=0xFF,
                                                         is_testable=False,
