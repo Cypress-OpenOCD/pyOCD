@@ -103,6 +103,7 @@ class cy8c64xx(CoreSightTarget):
         
         FlashRegion(start=0x18000000, length=0x1000000, blocksize=0x40000, page_size=0x1000,
                     is_boot_memory=False,
+                    is_testable=False,
                     erased_byte_value=0xFF,
                     is_powered_on_boot=False,
                     algo=flash_algo_smif,
@@ -341,6 +342,7 @@ class cy8c64xx_cm4_full(CoreSightTarget):
 
         FlashRegion(start=0x18000000, length=0x1000000, blocksize=0x40000, page_size=0x1000,
                     is_boot_memory=False,
+                    is_testable=False,
                     erased_byte_value=0xFF,
                     is_powered_on_boot=False,
                     algo=flash_algo_smif,

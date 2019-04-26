@@ -229,7 +229,7 @@ def flash_test(board_id):
                 rom_region.flash.cleanup()
             # CYPRESS PATCH END
             
-            if same(data_flashed, data) and (rom_region.flash.is_erase_all_supported == (info.program_type is FlashBuilder.FLASH_CHIP_ERASE)):
+            if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_CHIP_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -273,7 +273,7 @@ def flash_test(board_id):
                 rom_region.flash.cleanup()
             # CYPRESS PATCH END
             
-            if same(data_flashed, data) and (rom_region.flash.is_erase_all_supported == (info.program_type is FlashBuilder.FLASH_CHIP_ERASE)):
+            if same(data_flashed, data) and info.program_type is FlashBuilder.FLASH_CHIP_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
             else:
@@ -409,7 +409,7 @@ def flash_test(board_id):
             # Note - The decision based tests below are order dependent since they
             # depend on the previous state of the flash
 
-            if rom_start == flash_info.rom_start and rom_region.flash.is_erase_all_supported:
+            if rom_start == flash_info.rom_start:
                 print("\n------ Test Chip Erase Decision ------")
                 new_data = list(data)
                 new_data.extend([flash.region.erased_byte_value] * unused) # Pad with erased value
