@@ -59,8 +59,6 @@ win10_py_3.7_basic_test:
   stage: btest
   tags:
   - PYOCD-TEST-WIN1064
-  dependencies:
-    - unit_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
@@ -78,8 +76,6 @@ win7_py_2.7_basic_test:
   stage: btest
   tags:
   - PYOCD-TEST-WIN732
-  dependencies:
-    - unit_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
@@ -97,8 +93,6 @@ ub_py_3.7_basic_test:
   stage: btest
   tags:
   - PYOCD-TEST-UB1804
-  dependencies:
-    - unit_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
@@ -116,8 +110,6 @@ ub_py_2.7_basic_test:
   stage: btest
   tags:
   - PYOCD-TEST-UB1804-1
-  dependencies:
-    - unit_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
@@ -167,8 +159,6 @@ win10_py_3.7_functional_test:
   stage: ftest
   tags:
   - PYOCD-TEST-WIN1064
-  dependencies:
-    - win_py_3.7_basic_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
@@ -186,8 +176,6 @@ win7_py_2.7_functional_test:
   stage: ftest
   tags:
   - PYOCD-TEST-WIN732
-  dependencies:
-    - win_py_3.7_basic_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
@@ -205,8 +193,6 @@ ub_py_3.7_functional_test:
   stage: ftest
   tags:
   - PYOCD-TEST-UB1804
-  dependencies:
-    - ub_py_2.7_basic_test
   script:
     - python3 -V               # Print out python version for debugging
     - virtualenv venv
@@ -224,8 +210,6 @@ ub_py_2.7_functional_test:
   stage: ftest
   tags:
   - PYOCD-TEST-UB1804-1
-  dependencies:
-    - ub_py_2.7_basic_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
