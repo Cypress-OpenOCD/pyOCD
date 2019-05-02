@@ -123,8 +123,8 @@ ub_py_2.7_basic_test:
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
-mac1014_py_3.7_functional_test:
-  stage: ftest
+mac1014_py_3.7_basic_test:
+  stage: btest
   tags:
   - PYOCD-TEST-MAC1014
   script:
@@ -139,8 +139,8 @@ mac1014_py_3.7_functional_test:
     - echo [INFO] Running basic tests
     - python3 cy_basic_test.py
 
-mac1013_py_2.7_functional_test:
-  stage: ftest
+mac1013_py_2.7_basic_test:
+  stage: btest
   tags:
   - PYOCD-TEST-MAC1013
   script:
