@@ -55,7 +55,7 @@ unit_test:
     - echo [INFO] Running unit tests
     - pytest
 
-win_py_3.7_basic_test:
+win10_py_3.7_basic_test:
   stage: btest
   tags:
   - PYOCD-TEST-WIN1064
@@ -70,6 +70,45 @@ win_py_3.7_basic_test:
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
     - pushd test
+    - pyocd list
+    - echo [INFO] Running basic tests
+    - python cy_basic_test.py
+    
+win7_py_2.7_basic_test:
+  stage: btest
+  tags:
+  - PYOCD-TEST-WIN732
+  dependencies:
+    - unit_test
+  script:
+    - python -V               # Print out python version for debugging
+    - virtualenv venv
+    - call .\venv\Scripts\activate.bat
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - pyocd list
+    - echo [INFO] Running basic tests
+    - python cy_basic_test.py
+    
+ub_py_3.7_basic_test:
+  stage: btest
+  tags:
+  - PYOCD-TEST-UB1804
+  dependencies:
+    - unit_test
+  script:
+    - python -V               # Print out python version for debugging
+    - virtualenv venv
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - pyocd list
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
@@ -88,9 +127,42 @@ ub_py_2.7_basic_test:
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
     - pushd test
+    - pyocd list
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
     
+mac1014_py_3.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1014
+  script:
+    - virtualenv venv
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - pyocd list
+    - echo [INFO] Running basic tests
+    - python3 cy_basic_test.py
+
+mac1013_py_2.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1013
+  script:
+    - virtualenv venv
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - pyocd list
+    - echo [INFO] Running basic tests
+    - python cy_basic_test.py
+
 win10_py_3.7_functional_test:
   stage: ftest
   tags:
@@ -128,25 +200,6 @@ win7_py_2.7_functional_test:
     - echo [INFO] Running functional tests
     - python automated_test.py
   when: manual
-
-ub_py_2.7_functional_test:
-  stage: ftest
-  tags:
-  - PYOCD-TEST-UB1804-1
-  dependencies:
-    - ub_py_2.7_basic_test
-  script:
-    - python -V               # Print out python version for debugging
-    - virtualenv venv
-    - source venv/bin/activate
-    - echo [INFO] Installing python modules
-    - pip install setuptools_scm
-    - pip install setuptools_scm_git_archive
-    - pip install -r dev-requirements.txt
-    - pushd test
-    - echo [INFO] Running functional tests
-    - python automated_test.py
-  when: manual
   
 ub_py_3.7_functional_test:
   stage: ftest
@@ -167,10 +220,12 @@ ub_py_3.7_functional_test:
     - python3 automated_test.py
   when: manual
   
-mac1013_py_2.7_functional_test:
+ub_py_2.7_functional_test:
   stage: ftest
   tags:
-  - PYOCD-TEST-MAC1013
+  - PYOCD-TEST-UB1804-1
+  dependencies:
+    - ub_py_2.7_basic_test
   script:
     - python -V               # Print out python version for debugging
     - virtualenv venv
@@ -199,4 +254,21 @@ mac1014_py_3.7_functional_test:
     - pushd test
     - echo [INFO] Running functional tests
     - python3 automated_test.py
+  when: manual
+  
+mac1013_py_2.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1013
+  script:
+    - python -V               # Print out python version for debugging
+    - virtualenv venv
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
+    - python automated_test.py
   when: manual
