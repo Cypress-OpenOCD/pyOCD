@@ -170,7 +170,6 @@ win10_py_3.7_functional_test:
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
-  when: manual
   only:
     variables:
       - $FULL_TEST
@@ -190,7 +189,6 @@ win7_py_2.7_functional_test:
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
-  when: manual
   only:
     variables:
       - $FULL_TEST
@@ -210,7 +208,6 @@ ub_py_3.7_functional_test:
     - pushd test
     - echo [INFO] Running functional tests
     - python3 automated_test.py
-  when: manual
   only:
     variables:
       - $FULL_TEST
@@ -230,7 +227,6 @@ ub_py_2.7_functional_test:
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
-  when: manual
   only:
     variables:
       - $FULL_TEST  
@@ -250,7 +246,6 @@ mac1014_py_3.7_functional_test:
     - pushd test
     - echo [INFO] Running functional tests
     - python3 automated_test.py
-  when: manual
   only:
     variables:
       - $FULL_TEST
@@ -270,7 +265,6 @@ mac1013_py_2.7_functional_test:
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
-  when: manual
   only:
     variables:
       - $FULL_TEST
