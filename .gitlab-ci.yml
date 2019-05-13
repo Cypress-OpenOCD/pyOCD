@@ -173,7 +173,7 @@ win10_py_3.7_functional_test:
   when: manual
   only:
     variables:
-      - $FRIDAY_TEST
+      - $FULL_TEST
 
 win7_py_2.7_functional_test:
   stage: ftest
@@ -193,7 +193,7 @@ win7_py_2.7_functional_test:
   when: manual
   only:
     variables:
-      - $FRIDAY_TEST
+      - $FULL_TEST
   
 ub_py_3.7_functional_test:
   stage: ftest
@@ -213,7 +213,7 @@ ub_py_3.7_functional_test:
   when: manual
   only:
     variables:
-      - $FRIDAY_TEST
+      - $FULL_TEST
       
 ub_py_2.7_functional_test:
   stage: ftest
@@ -233,7 +233,7 @@ ub_py_2.7_functional_test:
   when: manual
   only:
     variables:
-      - $FRIDAY_TEST  
+      - $FULL_TEST  
   
 mac1014_py_3.7_functional_test:
   stage: ftest
@@ -253,7 +253,7 @@ mac1014_py_3.7_functional_test:
   when: manual
   only:
     variables:
-      - $FRIDAY_TEST
+      - $FULL_TEST
   
 mac1013_py_2.7_functional_test:
   stage: ftest
@@ -273,4 +273,4 @@ mac1013_py_2.7_functional_test:
   when: manual
   only:
     variables:
-      - $FRIDAY_TEST
+      - $FULL_TEST
