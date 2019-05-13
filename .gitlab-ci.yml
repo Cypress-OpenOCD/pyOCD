@@ -171,6 +171,9 @@ win10_py_3.7_functional_test:
     - echo [INFO] Running functional tests
     - python automated_test.py
   when: manual
+  only:
+    variables:
+      - $FRIDAY_TEST
 
 win7_py_2.7_functional_test:
   stage: ftest
@@ -188,6 +191,9 @@ win7_py_2.7_functional_test:
     - echo [INFO] Running functional tests
     - python automated_test.py
   when: manual
+  only:
+    variables:
+      - $FRIDAY_TEST
   
 ub_py_3.7_functional_test:
   stage: ftest
@@ -205,7 +211,10 @@ ub_py_3.7_functional_test:
     - echo [INFO] Running functional tests
     - python3 automated_test.py
   when: manual
-  
+  only:
+    variables:
+      - $FRIDAY_TEST
+      
 ub_py_2.7_functional_test:
   stage: ftest
   tags:
@@ -222,6 +231,9 @@ ub_py_2.7_functional_test:
     - echo [INFO] Running functional tests
     - python automated_test.py
   when: manual
+  only:
+    variables:
+      - $FRIDAY_TEST  
   
 mac1014_py_3.7_functional_test:
   stage: ftest
@@ -239,6 +251,9 @@ mac1014_py_3.7_functional_test:
     - echo [INFO] Running functional tests
     - python3 automated_test.py
   when: manual
+  only:
+    variables:
+      - $FRIDAY_TEST
   
 mac1013_py_2.7_functional_test:
   stage: ftest
@@ -256,3 +271,6 @@ mac1013_py_2.7_functional_test:
     - echo [INFO] Running functional tests
     - python automated_test.py
   when: manual
+  only:
+    variables:
+      - $FRIDAY_TEST
