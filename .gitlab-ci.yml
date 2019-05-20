@@ -139,21 +139,21 @@ mac1014_py_3.7_basic_test:
     - echo [INFO] Running basic tests
     - python3 cy_basic_test.py
 
-#mac1013_py_2.7_basic_test:
-#  stage: btest
-#  tags:
-#  - PYOCD-TEST-MAC1013
-#  script:
-#    - virtualenv venv
-#    - source venv/bin/activate
-#    - echo [INFO] Installing python modules
-#   - pip install setuptools_scm
-#    - pip install setuptools_scm_git_archive
-#    - pip install -r dev-requirements.txt
-#    - pushd test
-#    - pyocd list
-#    - echo [INFO] Running basic tests
-#    - python cy_basic_test.py
+mac1013_py_2.7_basic_test:
+  stage: btest
+  tags:
+  - PYOCD-TEST-MAC1013
+  script:
+    - virtualenv venv
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+   - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - pyocd list
+    - echo [INFO] Running basic tests
+    - python cy_basic_test.py
 
 win10_py_3.7_functional_test:
   stage: ftest
@@ -250,21 +250,21 @@ mac1014_py_3.7_functional_test:
     variables:
       - $FULL_TEST
   
-#mac1013_py_2.7_functional_test:
-#  stage: ftest
-#  tags:
-#  - PYOCD-TEST-MAC1013
-#  script:
-#    - python -V               # Print out python version for debugging
-#    - virtualenv venv
-#    - source venv/bin/activate
-#    - echo [INFO] Installing python modules
-#    - pip install setuptools_scm
-#    - pip install setuptools_scm_git_archive
-#    - pip install -r dev-requirements.txt
-#    - pushd test
-#    - echo [INFO] Running functional tests
-#    - python automated_test.py
-#  only:
-#    variables:
-#      - $FULL_TEST
+mac1013_py_2.7_functional_test:
+  stage: ftest
+  tags:
+  - PYOCD-TEST-MAC1013
+  script:
+    - python -V               # Print out python version for debugging
+    - virtualenv venv
+    - source venv/bin/activate
+    - echo [INFO] Installing python modules
+    - pip install setuptools_scm
+    - pip install setuptools_scm_git_archive
+    - pip install -r dev-requirements.txt
+    - pushd test
+    - echo [INFO] Running functional tests
+    - python automated_test.py
+  only:
+    variables:
+      - $FULL_TEST
