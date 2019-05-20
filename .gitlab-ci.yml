@@ -147,7 +147,7 @@ mac1013_py_2.7_basic_test:
     - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
-   - pip install setuptools_scm
+    - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
     - pushd test
