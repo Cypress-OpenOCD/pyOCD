@@ -26,7 +26,7 @@ cache:
 code_analysis:
   stage: analysis
   tags:
-  - PYOCD-TEST-UB1804-1
+    - PYOCD-TEST-UB1804-1
   script:
     - set
     - python -V               # Print out python version for debugging
@@ -38,6 +38,7 @@ code_analysis:
     - pip install -r dev-requirements.txt
     - echo [INFO] Running analysys
     - python test/pylint_test.py
+  allow_failure: true
 
 unit_test:
   stage: utest
