@@ -63,7 +63,7 @@ def main():
         if score < module.score or errors > 0 or warnings > module.warnings:
             status = 1
 
-    #exit(status)
+    exit(status)
 
 
 if __name__ == "__main__":
