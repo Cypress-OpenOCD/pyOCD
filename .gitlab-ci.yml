@@ -89,6 +89,8 @@ win7_py_2.7_basic_test:
     - pyocd list
     - echo [INFO] Running basic tests
     - python cy_basic_test.py
+  allow_failure: true
+
     
 ub_py_3.7_basic_test:
   stage: btest
