@@ -53,7 +53,7 @@ unit_test:
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
     - pip install -r dev-requirements.txt
-    - pip uninstall cmsis-pack-manager
+    - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - echo [INFO] Running unit tests
     - pytest
