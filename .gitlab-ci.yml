@@ -50,9 +50,9 @@ unit_test:
     - virtualenv venv
     - call .\venv\Scripts\activate.bat
     - echo [INFO] Installing python modules
+    - pip install cmsis-pack-manager
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
-    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - echo [INFO] Running unit tests
     - pytest
