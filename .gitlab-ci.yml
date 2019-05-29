@@ -35,6 +35,8 @@ code_analysis:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - echo [INFO] Running analysys
     - python test/pylint_test.py
@@ -88,6 +90,8 @@ win7_py_2.7_basic_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - pyocd list
@@ -107,6 +111,8 @@ ub_py_3.7_basic_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - pyocd list
@@ -124,6 +130,8 @@ ub_py_2.7_basic_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - pyocd list
@@ -140,6 +148,8 @@ mac1014_py_3.7_basic_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - pyocd list
@@ -156,6 +166,8 @@ mac1013_py_2.7_basic_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - pyocd list
@@ -173,6 +185,8 @@ win10_py_3.7_functional_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
@@ -192,6 +206,8 @@ win7_py_2.7_functional_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
@@ -211,6 +227,8 @@ ub_py_3.7_functional_test:
     - echo [INFO] Installing python modules
     - pip3 install setuptools_scm
     - pip3 install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip3 install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
@@ -230,6 +248,8 @@ ub_py_2.7_functional_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
@@ -249,6 +269,8 @@ mac1014_py_3.7_functional_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
@@ -268,6 +290,8 @@ mac1013_py_2.7_functional_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - echo [INFO] Running functional tests
