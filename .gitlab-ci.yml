@@ -52,9 +52,9 @@ unit_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
-    - pip install -r dev-requirements.txt
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
+    - pip install -r dev-requirements.txt
     - echo [INFO] Running unit tests
     - pytest
 
@@ -69,6 +69,8 @@ win10_py_3.7_basic_test:
     - echo [INFO] Installing python modules
     - pip install setuptools_scm
     - pip install setuptools_scm_git_archive
+    - pip uninstall cmsis-pack-manager --yes
+    - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
     - pushd test
     - pyocd list
