@@ -130,21 +130,29 @@ def flash_test(board_id):
 
     print("\n------ Test List boards ------")
     obj = ListGenerator.list_boards()
-    if {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1900', 'name': 'CY8CKIT-062-WIFI-BT'}\
-        in obj['boards'] and\
-        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1901', 'name': 'CY8CPROTO-062-4343W'}\
-        in obj['boards'] and\
-        {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1902', 'name': 'CY8CKIT-062-BLE'}\
-        in obj['boards'] and\
-        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1903', 'name': 'CY8CPROTO-062-43012'}\
-        in obj['boards'] and\
-        {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1904', 'name': 'CY8CPROTO-063-BLE'}\
-        in obj['boards'] and\
-        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1905', 'name': 'CY8CKIT-062-4343W'}\
-        in obj['boards'] and\
-        {'binary': 'l1_cy8c6xx7.bin', 'target': 'cy8c6xx7', 'id': '1906', 'name': 'CYW943012P6EVB-01'} \
+    if {'id': '1900', 'name': 'CY8CKIT-062-WIFI-BT', 'target': 'cy8c6xx7', 'binary': 'l1_cy8c6xx7.bin',
+         'is_target_builtin': True, 'is_target_supported': True}\
         in obj['boards'] and \
-        {'binary': 'l1_cy8c6xxa.bin', 'target': 'cy8c6xxA', 'id': '1909', 'name': 'CY8CPROTO-062S2-43012'}\
+        {'id': '1901', 'name': 'CY8CPROTO-062-4343W', 'target': 'cy8c6xxA', 'binary': 'l1_cy8c6xxa.bin',
+         'is_target_builtin': False, 'is_target_supported': False}\
+        in obj['boards'] and \
+        {'id': '1902', 'name': 'CY8CKIT-062-BLE', 'target': 'cy8c6xx7', 'binary': 'l1_cy8c6xx7.bin',
+         'is_target_builtin': True, 'is_target_supported': True}\
+        in obj['boards'] and \
+        {'id': '1903', 'name': 'CY8CPROTO-062-43012', 'target': 'cy8c6xxA', 'binary': 'l1_cy8c6xxa.bin',
+         'is_target_builtin': False, 'is_target_supported': False}\
+        in obj['boards'] and \
+        {'id': '1904', 'name': 'CY8CPROTO-063-BLE', 'target': 'cy8c6xx7', 'binary': 'l1_cy8c6xx7.bin',
+         'is_target_builtin': True, 'is_target_supported': True}\
+        in obj['boards'] and \
+        {'id': '1905', 'name': 'CY8CKIT-062-4343W', 'target': 'cy8c6xxA', 'binary': 'l1_cy8c6xxa.bin',
+         'is_target_builtin': False, 'is_target_supported': False}\
+        in obj['boards'] and \
+        {'id': '1906', 'name': 'CYW943012P6EVB-01', 'target': 'cy8c6xx7', 'binary': 'l1_cy8c6xx7.bin',
+         'is_target_builtin': True, 'is_target_supported': True} \
+        in obj['boards'] and \
+        {'id': '1907', 'name': 'CY8CPROTO-064-SB', 'target': 'cy8c64xx_cm4', 'binary': 'l1_cy8c6xx7.bin',
+         'is_target_builtin': True, 'is_target_supported': True}\
         in obj['boards']:
 
         print("TEST PASSED")
