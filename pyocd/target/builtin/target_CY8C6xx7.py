@@ -320,8 +320,9 @@ class CortexM_CY8C6xx7(CortexM):
         if entry < 0x10000000 or entry > 0x18000000:
             LOG.info("Entry Point address invalid (0x%08X), will not halt at main()", entry)
             return
-
+        
         self.set_breakpoint(entry)
+        self.bp_manager.flush()
         self.reset(self.ResetType.SW_SYSRESETREQ)
         sleep(0.2)
         self.wait_halted()

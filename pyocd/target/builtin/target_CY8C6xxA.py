@@ -509,6 +509,7 @@ class CortexM_CY8C6xxA(CortexM):
             return
 
         self.set_breakpoint(entry)
+        self.bp_manager.flush()
         self.reset(self.ResetType.SW_SYSRESETREQ)
         sleep(0.2)
         self.wait_halted()
