@@ -22,22 +22,19 @@ import logging
 import os
 import six
 
-log = logging.getLogger('hidapi')
+LOG = logging.getLogger(__name__)
 
 try:
     import hid
 except:
     if os.name == "posix" and os.uname()[0] == 'Darwin':
-        log.error("cython-hidapi is required on a Mac OS X Machine")
+        LOG.error("cython-hidapi is required on a Mac OS X Machine")
     IS_AVAILABLE = False
 else:
     IS_AVAILABLE = True
 
 class HidApiUSB(Interface):
-    """
-    This class provides basic functions to access
-    a USB HID device using cython-hidapi:
-        - write/read an endpoint
+    """! @brief CMSIS-DAP USB interface class using cython-hidapi backend.
     """
 
     isAvailable = IS_AVAILABLE
@@ -55,15 +52,15 @@ class HidApiUSB(Interface):
 
     @staticmethod
     def get_all_connected_interfaces():
-        """
-        returns all the connected devices which matches HidApiUSB.vid/HidApiUSB.pid.
+        """! @brief Returns all the connected devices with CMSIS-DAP in the name.
+        
         returns an array of HidApiUSB (Interface) objects
         """
 
         devices = hid.enumerate()
 
         if not devices:
-            log.debug("No Mbed device connected")
+            LOG.debug("No Mbed device connected")
             return []
 
         boards = []
@@ -84,7 +81,7 @@ class HidApiUSB(Interface):
             try:
                 dev = hid.device(vendor_id=vid, product_id=pid, path=deviceInfo['path'])
             except IOError as exc:
-                log.debug("Failed to open USB device: %s", exc)
+                LOG.debug("Failed to open USB device: %s", exc)
                 continue
 
             # Create the USB interface object for this device.
@@ -101,8 +98,7 @@ class HidApiUSB(Interface):
         return boards
 
     def write(self, data):
-        """
-        write data on the OUT endpoint associated to the HID interface
+        """! @brief Write data on the OUT endpoint associated to the HID interface
         """
         for _ in range(self.packet_size - len(data)):
             data.append(0)
@@ -112,8 +108,7 @@ class HidApiUSB(Interface):
 
 
     def read(self, timeout=-1):
-        """
-        read data on the IN endpoint associated to the HID interface
+        """! @brief Read data on the IN endpoint associated to the HID interface
         """
         return self.device.read(self.packet_size)
 
@@ -121,10 +116,9 @@ class HidApiUSB(Interface):
         return self.serial_number
 
     def close(self):
+        """! @brief Close the interface
         """
-        close the interface
-        """
-        log.debug("closing interface")
+        LOG.debug("closing interface")
         self.device.close()
 
     def set_packet_count(self, count):

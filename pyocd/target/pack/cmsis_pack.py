@@ -16,7 +16,7 @@
 
 from __future__ import print_function
 from xml.etree.ElementTree import ElementTree
-from zipfile import ZipFile
+import zipfile
 from collections import namedtuple
 import logging
 import io
@@ -24,14 +24,21 @@ import itertools
 import six
 import struct
 
+# zipfile from Python 2 has a misspelled BadZipFile exception class.
+try:
+    from zipfile import BadZipFile
+except ImportError:
+    from zipfile import BadZipfile as BadZipFile
+
 from .flash_algo import PackFlashAlgo
+from ... import core
 from ...core import exceptions
 from ...core.target import Target
 from ...core.memory_map import (MemoryMap, MemoryType, MEMORY_TYPE_CLASS_MAP, FlashRegion)
 
 LOG = logging.getLogger(__name__)
 
-class MalformedCmsisPackError(exceptions.Error):
+class MalformedCmsisPackError(exceptions.TargetSupportError):
     """! @brief Exception raised for errors parsing a CMSIS-Pack."""
     pass
 
@@ -70,11 +77,18 @@ class CmsisPack(object):
         @param self
         @param file_or_path The .pack file to open. May be a string that is the path to the pack,
             or may be a ZipFile, or a file-like object that is already opened.
+        
+        @exception MalformedCmsisPackError The pack is not a zip file, or the .pdsc file is missing
+            from within the pack.
         """
-        if isinstance(file_or_path, ZipFile):
+        if isinstance(file_or_path, zipfile.ZipFile):
             self._pack_file = file_or_path
         else:
-            self._pack_file = ZipFile(file_or_path, 'r')
+            try:
+                self._pack_file = zipfile.ZipFile(file_or_path, 'r')
+            except BadZipFile as err:
+                six.raise_from(MalformedCmsisPackError("Failed to open CMSIS-Pack '{}': {}".format(
+                    file_or_path, err)), err)
         
         # Find the .pdsc file.
         for name in self._pack_file.namelist():
@@ -82,7 +96,7 @@ class CmsisPack(object):
                 self._pdscName = name
                 break
         else:
-            raise MalformedCmsisPackError("CMSIS-Pack is missing a .pdsc file")
+            raise MalformedCmsisPackError("CMSIS-Pack '{}' is missing a .pdsc file".format(file_or_path))
         
         # Convert PDSC into an ElementTree.
         with self._pack_file.open(self._pdscName) as pdscFile:
@@ -371,14 +385,24 @@ class CmsisPackDevice(object):
             algoData = self.pack.get_file(algo.attrib['name'])
             packAlgo = PackFlashAlgo(algoData)
             
+            # Log details of this flash algo if the debug option is enabled.
+            current_session = core.session.Session.get_current()
+            if current_session and current_session.options.get("debug.log_flm_info"):
+                LOG.debug("Flash algo info: %s", packAlgo.flash_info)
+            
+            # Choose the page size. The check for <=32 is to handle some flash algos with incorrect
+            # page sizes that are too small and probably represent the phrase size.
+            page_size = packAlgo.page_size
+            if page_size <= 32:
+                page_size = min(s[1] for s in packAlgo.sector_sizes)
+            
             # Construct the pyOCD algo using the largest sector size. We can share the same
             # algo for all sector sizes.
-            algo = packAlgo.get_pyocd_flash_algo(
-                            max(s[1] for s in packAlgo.sector_sizes), self._default_ram)
+            algo = packAlgo.get_pyocd_flash_algo(page_size, self._default_ram)
 
             # Create a separate flash region for each sector size range.
             for i, sectorInfo in enumerate(packAlgo.sector_sizes):
-                start, blocksize = sectorInfo
+                start, sector_size = sectorInfo
                 if i + 1 >= len(packAlgo.sector_sizes):
                     nextStart = region.length
                 else:
@@ -386,6 +410,15 @@ class CmsisPackDevice(object):
                 
                 length = nextStart - start
                 start += region.start
+                
+                # Limit page size.
+                if page_size > sector_size:
+                    region_page_size = sector_size
+                    LOG.warning("Page size (%d) is larger than sector size (%d) for flash region %s; "
+                                "reducing page size to %d", page_size, sector_size, region.name,
+                                region_page_size)
+                else:
+                    region_page_size = page_size
                 
                 # If we don't have a boot memory yet, pick the first flash.
                 if not self._saw_startup:
@@ -399,7 +432,8 @@ class CmsisPackDevice(object):
                                 access=region.access,
                                 start=start,
                                 length=length,
-                                blocksize=blocksize,
+                                sector_size=sector_size,
+                                page_size=region_page_size,
                                 flm=packAlgo,
                                 algo=algo,
                                 erased_byte_value=packAlgo.flash_info.value_empty,

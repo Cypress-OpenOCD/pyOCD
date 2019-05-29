@@ -19,7 +19,6 @@ from __future__ import print_function
 import sys
 import os
 import logging
-import traceback
 import argparse
 import json
 import pkg_resources
@@ -34,6 +33,8 @@ from ..utility.cmdline import (split_command_line, VECTOR_CATCH_CHAR_MAP, conver
 from ..probe.cmsis_dap_probe import CMSISDAPProbe
 from ..probe.pydapaccess import DAPAccess
 from ..core.session import Session
+
+LOG = logging.getLogger(__name__)
 
 LEVELS = {
     'debug': logging.DEBUG,
@@ -60,10 +61,10 @@ class GDBServerTool(object):
         parser = argparse.ArgumentParser(description='PyOCD GDB Server', epilog=epilog)
         parser.add_argument('--version', action='version', version=__version__)
         parser.add_argument('--config', metavar="PATH", default=None, help="Use a YAML config file.")
-        parser.add_argument("--no-config", action="store_true", help="Do not use a configuration file.")
+        parser.add_argument("--no-config", action="store_true", default=None, help="Do not use a configuration file.")
         parser.add_argument("--pack", metavar="PATH", help="Path to a CMSIS Device Family Pack")
         parser.add_argument("-p", "--port", dest="port_number", type=int, default=3333, help="Set the port number that GDB server will open (default 3333).")
-        parser.add_argument("-sc", "--semihost-console", dest="semihost_console_type", default="telnet", choices=('telnet', 'stdx'), help="Console for semihosting.")
+        parser.add_argument("-sc", "--semihost-console", dest="semihost_console_type", default=None, choices=('telnet', 'stdx'), help="Console for semihosting.")
         parser.add_argument("-T", "--telnet-port", dest="telnet_port", type=int, default=4444, help="Specify the telnet port for semihosting (default 4444).")
         parser.add_argument("--allow-remote", dest="serve_local_only", default=True, action="store_false", help="Allow remote TCP/IP connections (default is no).")
         parser.add_argument("-b", "--board", dest="board_id", default=None, help="Connect to board by board ID. Use -l to list all connected boards. Only a unique part of the board ID needs to be provided.")
@@ -75,10 +76,10 @@ class GDBServerTool(object):
         parser.add_argument("-n", "--nobreak", dest="no_break_at_hardfault", action="store_true", help="Disable halt at hardfault handler. (Deprecated)")
         parser.add_argument("-r", "--reset-break", dest="break_on_reset", action="store_true", help="Halt the target when reset. (Deprecated)")
         parser.add_argument("-C", "--vector-catch", default='h', help="Enable vector catch sources, one letter per enabled source in any order, or 'all' or 'none'. (h=hard fault, b=bus fault, m=mem fault, i=irq err, s=state err, c=check err, p=nocp, r=reset, a=all, n=none). (Default is hard fault.)")
-        parser.add_argument("-s", "--step-int", dest="step_into_interrupt", default=False, action="store_true", help="Allow single stepping to step into interrupts.")
-        parser.add_argument("-f", "--frequency", dest="frequency", default=1000000, type=int, help="Set the SWD clock frequency in Hz.")
-        parser.add_argument("-o", "--persist", dest="persist", default=False, action="store_true", help="Keep GDB server running even after remote has detached.")
-        parser.add_argument("-bh", "--soft-bkpt-as-hard", dest="soft_bkpt_as_hard", default=False, action="store_true", help="Replace software breakpoints with hardware breakpoints.")
+        parser.add_argument("-s", "--step-int", dest="step_into_interrupt", default=None, action="store_true", help="Allow single stepping to step into interrupts.")
+        parser.add_argument("-f", "--frequency", dest="frequency", default=None, type=int, help="Set the SWD clock frequency in Hz.")
+        parser.add_argument("-o", "--persist", dest="persist", default=None, action="store_true", help="Keep GDB server running even after remote has detached.")
+        parser.add_argument("-bh", "--soft-bkpt-as-hard", dest="soft_bkpt_as_hard", default=False, action="store_true", help="Replace software breakpoints with hardware breakpoints (ignored).")
         group = parser.add_mutually_exclusive_group()
         group.add_argument("-ce", "--chip_erase", action="store_true", help="Use chip erase when programming.")
         group.add_argument("-se", "--sector_erase", action="store_true", help="Use sector erase when programming.")
@@ -86,10 +87,10 @@ class GDBServerTool(object):
         parser.add_argument("-u", "--unlock", action="store_true", default=False, help="Unlock the device.")
         # reserved: "-a", "--address"
         # reserved: "-s", "--skip"
-        parser.add_argument("-hp", "--hide_progress", action="store_true", help="Don't display programming progress.")
-        parser.add_argument("-fp", "--fast_program", action="store_true", help="Use only the CRC of each page to determine if it already has the same data.")
-        parser.add_argument("-S", "--semihosting", dest="enable_semihosting", action="store_true", help="Enable semihosting.")
-        parser.add_argument("-G", "--gdb-syscall", dest="semihost_use_syscalls", action="store_true", help="Use GDB syscalls for semihosting file I/O.")
+        parser.add_argument("-hp", "--hide_progress", action="store_true", default=None, help="Don't display programming progress.")
+        parser.add_argument("-fp", "--fast_program", action="store_true", default=None, help="Use only the CRC of each page to determine if it already has the same data.")
+        parser.add_argument("-S", "--semihosting", dest="enable_semihosting", action="store_true", default=None, help="Enable semihosting.")
+        parser.add_argument("-G", "--gdb-syscall", dest="semihost_use_syscalls", action="store_true", default=None, help="Use GDB syscalls for semihosting file I/O.")
         parser.add_argument("-c", "--command", dest="commands", metavar="CMD", action='append', nargs='+', help="Run command (OpenOCD compatibility).")
         parser.add_argument("-da", "--daparg", dest="daparg", nargs='+', help="Send setting to DAPAccess layer.")
         parser.add_argument("--elf", metavar="PATH", help="Optionally specify ELF file being debugged.")
@@ -100,11 +101,11 @@ class GDBServerTool(object):
 
     def get_chip_erase(self, args):
         # Determine programming mode
-        chip_erase = None
+        chip_erase = "auto"
         if args.chip_erase:
-            chip_erase = True
+            chip_erase = "chip"
         elif args.sector_erase:
-            chip_erase = False
+            chip_erase = "sector"
         return chip_erase
 
     def get_vector_catch(self, args):
@@ -128,7 +129,6 @@ class GDBServerTool(object):
             'gdbserver_port' : self.args.port_number,
             'step_into_interrupt' : args.step_into_interrupt,
             'persist' : args.persist,
-            'soft_bkpt_as_hard' : args.soft_bkpt_as_hard,
             'chip_erase': self.get_chip_erase(args),
             'hide_programming_progress' : args.hide_progress,
             'fast_program' : args.fast_program,
@@ -146,8 +146,8 @@ class GDBServerTool(object):
         level = LEVELS.get(args.debug_level, logging.NOTSET)
         logging.basicConfig(level=level, format=format)
 
-    ## @brief Handle OpenOCD commands for compatibility.
     def process_commands(self, commands):
+        """! @brief Handle OpenOCD commands for compatibility."""
         if commands is None:
             return
         for cmd_list in commands:
@@ -257,7 +257,7 @@ class GDBServerTool(object):
         DAPAccess.set_args(self.args.daparg)
 
         if not self.args.no_deprecation_warning:
-            logging.warning("pyocd-gdbserver is deprecated; please use the new combined pyocd tool.")
+            LOG.warning("pyocd-gdbserver is deprecated; please use the new combined pyocd tool.")
     
         self.process_commands(self.args.commands)
 
@@ -277,7 +277,7 @@ class GDBServerTool(object):
                     config_file=self.args.config,
                     no_config=self.args.no_config,
                     pack=self.args.pack,
-                    board_id=self.args.board_id,
+                    unique_id=self.args.board_id,
                     target_override=self.args.target_override,
                     frequency=self.args.frequency,
                     **sessionOptions)
@@ -300,8 +300,7 @@ class GDBServerTool(object):
                 for gdb in gdbs:
                     gdb.stop()
             except Exception as e:
-                print("uncaught exception: %s" % e)
-                traceback.print_exc()
+                LOG.error("uncaught exception: %s" % e, exc_info=Session.get_current().log_tracebacks)
                 for gdb in gdbs:
                     gdb.stop()
                 return 1

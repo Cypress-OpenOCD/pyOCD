@@ -1,5 +1,5 @@
 # pyOCD debugger
-# Copyright (c) 2015 Arm Limited
+# Copyright (c) 2015-2019 Arm Limited
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,13 +20,14 @@ import io
 import logging
 import time
 import datetime
-import traceback
 import six
 import pyocd
-from ..core import exceptions
+from ..core import (exceptions, session)
 
-# Debug logging options
-LOG_SEMIHOST = True
+LOG = logging.getLogger(__name__)
+
+TRACE = LOG.getChild("trace")
+TRACE.setLevel(logging.CRITICAL)
 
 ## bkpt #0xab instruction
 BKPT_INSTR = 0xbeab
@@ -70,12 +71,13 @@ STDERR_FD = 3
 # @see SemihostAgent::_get_string()
 MAX_STRING_LENGTH = 2048
 
-##
-# @brief Interface for semihosting file I/O handlers.
-#
-# This class is also used as the default I/O handler if none is provided to SemihostAgent.
-# In this case, all file I/O requests are rejected.
 class SemihostIOHandler(object):
+    """! @brief Interface for semihosting file I/O handlers.
+    
+    This class is also used as the default I/O handler if none is provided to SemihostAgent.
+    In this case, all file I/O requests are rejected.
+    """
+    
     def __init__(self):
         self.agent = None
         self._errno = 0
@@ -87,22 +89,23 @@ class SemihostIOHandler(object):
     def errno(self):
         return self._errno
 
-    ## @brief Helper for standard I/O open requests.
-    #
-    # In the ARM semihosting spec, standard I/O files are opened using a filename of ":tt"
-    # with the open mode specifying which standard I/O file to open. This method takes care
-    # of these special open requests, and is intended to be used by concrete I/O handler
-    # subclasses.
-    #
-    # @return A 2-tuple of the file descriptor and filename. The filename is returned so it
-    #   only has to be read from target memory once if the request is not for standard I/O.
-    #   The returned file descriptor may be one of 0, 1, or 2 for the standard I/O files,
-    #   -1 if an invalid combination was requested, or None if the request was not for
-    #   a standard I/O file (i.e., the filename was not ":tt"). If None is returned for the
-    #   file descriptor, the caller must handle the open request.
     def _std_open(self, fnptr, fnlen, mode):
+        """! @brief Helper for standard I/O open requests.
+        
+        In the ARM semihosting spec, standard I/O files are opened using a filename of ":tt"
+        with the open mode specifying which standard I/O file to open. This method takes care
+        of these special open requests, and is intended to be used by concrete I/O handler
+        subclasses.
+        
+        @return A 2-tuple of the file descriptor and filename. The filename is returned so it
+          only has to be read from target memory once if the request is not for standard I/O.
+          The returned file descriptor may be one of 0, 1, or 2 for the standard I/O files,
+          -1 if an invalid combination was requested, or None if the request was not for
+          a standard I/O file (i.e., the filename was not ":tt"). If None is returned for the
+          file descriptor, the caller must handle the open request.
+        """
         filename = self.agent._get_string(fnptr, fnlen)
-        logging.debug("Semihost: open '%s' mode %s", filename, mode)
+        LOG.debug("Semihost: open '%s' mode %s", filename, mode)
 
         # Handle standard I/O.
         if filename == ':tt':
@@ -113,7 +116,7 @@ class SemihostIOHandler(object):
             elif mode == 'a':
                 fd = STDERR_FD
             else:
-                logging.warning("Unrecognized semihosting console open file combination: mode=%s", mode)
+                LOG.warning("Unrecognized semihosting console open file combination: mode=%s", mode)
                 return -1, filename
             return fd, filename
         return None, filename
@@ -148,13 +151,14 @@ class SemihostIOHandler(object):
     def rename(self, oldptr, oldlength, newptr, newlength):
         raise NotImplementedError()
 
-##
-# @brief Implements semihosting requests directly in the Python process.
-#
-# This class maintains its own list of pseudo-file descriptors for files opened by the
-# debug target. By default, this class uses the system stdin, stdout, and stderr file objects
-# for file desscriptors 1, 2, and 3.
 class InternalSemihostIOHandler(SemihostIOHandler):
+    """! @brief Implements semihosting requests directly in the Python process.
+    
+    This class maintains its own list of pseudo-file descriptors for files opened by the
+    debug target. By default, this class uses the system stdin, stdout, and stderr file objects
+    for file desscriptors 1, 2, and 3.
+    """
+    
     def __init__(self):
         super(InternalSemihostIOHandler, self).__init__()
         self.next_fd = STDERR_FD + 1
@@ -189,8 +193,7 @@ class InternalSemihostIOHandler(SemihostIOHandler):
             return fd
         except IOError as e:
             self._errno = e.errno
-            logging.error("Semihost: failed to open file '%s'", filename)
-            traceback.print_exc()
+            LOG.error("Semihost: failed to open file '%s'", filename, exc_info=session.Session.get_current().log_tracebacks)
             return -1
 
     def close(self, fd):
@@ -219,7 +222,7 @@ class InternalSemihostIOHandler(SemihostIOHandler):
             return 0
         except IOError as e:
             self._errno = e.errno
-            logging.debug("Semihost: exception: %s", e)
+            LOG.debug("Semihost: exception: %s", e)
             return -1
 
     def read(self, fd, ptr, length):
@@ -233,7 +236,7 @@ class InternalSemihostIOHandler(SemihostIOHandler):
                 data = data.encode()
         except IOError as e:
             self._errno = e.errno
-            logging.debug("Semihost: exception: %s", e)
+            LOG.debug("Semihost: exception: %s", e)
             return -1
         data = bytearray(data)
         self.agent.context.write_memory_block8(ptr, data)
@@ -313,42 +316,42 @@ class ConsoleIOHandler(SemihostIOHandler):
         else:
             return -1
 
-##
-# @brief Handler for ARM semihosting requests.
-#
-# Semihosting requests are made by the target by executing a 'bkpt #0xab' instruction. The
-# requested operation is specified by R0 and any arguments by R1. Many requests use a block
-# of word-sized arguments pointed to by R1. The return value is passed back to the target
-# in R0.
-#
-# This class does not handle any file-related requests by itself. It uses I/O handler objects
-# passed in to the constructor. The requests handled directly by this class are #TARGET_SYS_CLOCK
-# and #TARGET_SYS_TIME.
-#
-# There are two types of I/O handlers used by this class. The main I/O handler, set
-# with the constructor's @i io_handler parameter, is used for most file operations.
-# You may optionally pass another I/O handler for the @i console constructor parameter. The
-# console handler is used solely for standard I/O and debug console I/O requests. If no console
-# handler is provided, the main handler is used instead. TARGET_SYS_OPEN requests are not
-# passed to the console handler in any event, they are always passed to the main handler.
-#
-# If no main I/O handler is provided, the class will use SemihostIOHandler, which causes all
-# file I/O requests to be rejected as an error.
-#
-# The SemihostAgent assumes standard I/O file descriptor numbers are #STDIN_FD, #STDOUT_FD,
-# and #STDERR_FD. When it receives a read or write request for one of these descriptors, it
-# passes the request to the console handler. This means the main handler must return these
-# numbers for standard I/O open requests (those with a file name of ":tt").
-#
-# Not all semihosting requests are supported. Those that are not implemented are:
-# - TARGET_SYS_TMPNAM
-# - TARGET_SYS_SYSTEM
-# - TARGET_SYS_GET_CMDLINE
-# - TARGET_SYS_HEAPINFO
-# - TARGET_SYS_EXIT
-# - TARGET_SYS_ELAPSED
-# - TARGET_SYS_TICKFREQ
 class SemihostAgent(object):
+    """! @brief Handler for ARM semihosting requests.
+    
+    Semihosting requests are made by the target by executing a 'bkpt #0xab' instruction. The
+    requested operation is specified by R0 and any arguments by R1. Many requests use a block
+    of word-sized arguments pointed to by R1. The return value is passed back to the target
+    in R0.
+    
+    This class does not handle any file-related requests by itself. It uses I/O handler objects
+    passed in to the constructor. The requests handled directly by this class are #TARGET_SYS_CLOCK
+    and #TARGET_SYS_TIME.
+    
+    There are two types of I/O handlers used by this class. The main I/O handler, set
+    with the constructor's @i io_handler parameter, is used for most file operations.
+    You may optionally pass another I/O handler for the @i console constructor parameter. The
+    console handler is used solely for standard I/O and debug console I/O requests. If no console
+    handler is provided, the main handler is used instead. TARGET_SYS_OPEN requests are not
+    passed to the console handler in any event, they are always passed to the main handler.
+    
+    If no main I/O handler is provided, the class will use SemihostIOHandler, which causes all
+    file I/O requests to be rejected as an error.
+    
+    The SemihostAgent assumes standard I/O file descriptor numbers are #STDIN_FD, #STDOUT_FD,
+    and #STDERR_FD. When it receives a read or write request for one of these descriptors, it
+    passes the request to the console handler. This means the main handler must return these
+    numbers for standard I/O open requests (those with a file name of ":tt").
+    
+    Not all semihosting requests are supported. Those that are not implemented are:
+    - TARGET_SYS_TMPNAM
+    - TARGET_SYS_SYSTEM
+    - TARGET_SYS_GET_CMDLINE
+    - TARGET_SYS_HEAPINFO
+    - TARGET_SYS_EXIT
+    - TARGET_SYS_ELAPSED
+    - TARGET_SYS_TICKFREQ
+    """
 
     ## Index into this array is the file open mode argument to TARGET_SYS_OPEN.
     OPEN_MODES = ['r', 'rb', 'r+', 'r+b', 'w', 'wb', 'w+', 'w+b', 'a', 'ab', 'a+', 'a+b']
@@ -389,21 +392,22 @@ class SemihostAgent(object):
                 TARGET_SYS_TICKFREQ    : self.handle_sys_tickfreq
             }
 
-    ## @brief Handle a semihosting request.
-    #
-    # This method should be called after the target has halted, to check if the halt was
-    # due to a semihosting request. It first checks to see if the target halted because
-    # of a breakpoint. If so, it reads the instruction at PC to make sure it is a 'bkpt #0xAB'
-    # instruction. If so, the target is making a semihosting request. If not, nothing more is done.
-    #
-    # After the request is handled, the PC is advanced to the next instruction after the 'bkpt'.
-    # A boolean is return indicating whether a semihosting request was handled. If True, the
-    # caller should resume the target immediately.
-    #
-    # @retval True A semihosting request was handled.
-    # @retval False The target halted for a reason other than semihosting, i.e. a user-installed
-    #   debugging breakpoint.
     def check_and_handle_semihost_request(self):
+        """! @brief Handle a semihosting request.
+        
+        This method should be called after the target has halted, to check if the halt was
+        due to a semihosting request. It first checks to see if the target halted because
+        of a breakpoint. If so, it reads the instruction at PC to make sure it is a 'bkpt #0xAB'
+        instruction. If so, the target is making a semihosting request. If not, nothing more is done.
+        
+        After the request is handled, the PC is advanced to the next instruction after the 'bkpt'.
+        A boolean is return indicating whether a semihosting request was handled. If True, the
+        caller should resume the target immediately.
+        
+        @retval True A semihosting request was handled.
+        @retval False The target halted for a reason other than semihosting, i.e. a user-installed
+          debugging breakpoint.
+        """
         # Nothing to do if this is not a bkpt.
         if (self.context.read32(pyocd.coresight.cortex_m.CortexM.DFSR) &
                 pyocd.coresight.cortex_m.CortexM.DFSR_BKPT) == 0:
@@ -436,11 +440,11 @@ class SemihostAgent(object):
             try:
                 result = handler(args)
             except NotImplementedError:
-                logging.warning("Semihost: unimplemented request pc=%x r0=%x r1=%x", pc, op, args)
+                LOG.warning("Semihost: unimplemented request pc=%x r0=%x r1=%x", pc, op, args)
                 result = -1
-            except Exception as e:
-                logging.warning("Exception while handling semihost request: %s", e)
-                traceback.print_exc(e)
+            except (exceptions.Error, IOError) as e:
+                LOG.error("Exception while handling semihost request: %s", e,
+                    exc_info=session.Session.get_current().log_tracebacks)
                 result = -1
         else:
             result = -1
@@ -450,10 +454,11 @@ class SemihostAgent(object):
 
         return True
 
-    ## @brief Clean up any resources allocated by semihost requests.
-    #
-    # @note May be called more than once.
     def cleanup(self):
+        """! @brief Clean up any resources allocated by semihost requests.
+        
+        @note May be called more than once.
+        """
         self.io_handler.cleanup()
         if self.console is not self.io_handler:
             self.console.cleanup()
@@ -498,31 +503,26 @@ class SemihostAgent(object):
             return -1
         mode = self.OPEN_MODES[mode]
 
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: open %x/%x, mode %s", fnptr, fnlen, mode)
+        TRACE.debug("Semihost: open %x/%x, mode %s", fnptr, fnlen, mode)
         return self.io_handler.open(fnptr, fnlen, mode)
 
     def handle_sys_close(self, args):
         fd = self._get_args(args, 1)
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: close fd=%d", fd)
+        TRACE.debug("Semihost: close fd=%d", fd)
         return self.io_handler.close(fd)
 
     def handle_sys_writec(self, args):
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: writec %x", args)
+        TRACE.debug("Semihost: writec %x", args)
         return self.console.write(STDOUT_FD, args, 1)
 
     def handle_sys_write0(self, args):
         msg = self._get_string(args)
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: write0 msg='%s'", msg)
+        TRACE.debug("Semihost: write0 msg='%s'", msg)
         return self.console.write(STDOUT_FD, args, len(msg))
 
     def handle_sys_write(self, args):
         fd, data_ptr, length = self._get_args(args, 3)
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: write fd=%d ptr=%x len=%d", fd, data_ptr, length)
+        TRACE.debug("Semihost: write fd=%d ptr=%x len=%d", fd, data_ptr, length)
         if fd in (STDOUT_FD, STDERR_FD):
             return self.console.write(fd, data_ptr, length)
         else:
@@ -530,16 +530,14 @@ class SemihostAgent(object):
 
     def handle_sys_read(self, args):
         fd, ptr, length = self._get_args(args, 3)
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: read fd=%d ptr=%x len=%d", fd, ptr, length)
+        TRACE.debug("Semihost: read fd=%d ptr=%x len=%d", fd, ptr, length)
         if fd == STDIN_FD:
             return self.console.read(fd, ptr, length)
         else:
             return self.io_handler.read(fd, ptr, length)
 
     def handle_sys_readc(self, args):
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: readc")
+        TRACE.debug("Semihost: readc")
         return self.console.readc()
 
     def handle_sys_iserror(self, args):
@@ -547,20 +545,17 @@ class SemihostAgent(object):
 
     def handle_sys_istty(self, args):
         fd = self._get_args(args, 1)
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: istty fd=%d", fd)
+        TRACE.debug("Semihost: istty fd=%d", fd)
         return self.io_handler.istty(fd)
 
     def handle_sys_seek(self, args):
         fd, pos = self._get_args(args, 2)
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: seek fd=%d pos=%d", fd, pos)
+        TRACE.debug("Semihost: seek fd=%d pos=%d", fd, pos)
         return self.io_handler.seek(fd, pos)
 
     def handle_sys_flen(self, args):
         fd = self._get_args(args, 1)
-        if LOG_SEMIHOST:
-            logging.debug("Semihost: flen fd=%d", fd)
+        TRACE.debug("Semihost: flen fd=%d", fd)
         return self.io_handler.flen(fd)
 
     def handle_sys_tmpnam(self, args):

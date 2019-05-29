@@ -24,6 +24,8 @@ import logging
 import os.path
 from time import (time, sleep)
 
+LOG = logging.getLogger(__name__)
+
 SIM_SDID = 0x40075024
 SIM_SDID_KEYATTR_MASK = 0x70
 SIM_SDID_KEYATTR_SHIFT = 4
@@ -130,11 +132,12 @@ class Flash_kl28z(Flash_Kinetis):
         self._saved_firccsr = 0
         self._saved_rccr = 0
 
-    ##
-    # This function sets up target clocks to ensure that flash is clocked at the maximum
-    # of 24MHz. Doing so gets the best flash programming performance. The FIRC clock source
-    # is used so that there is no dependency on an external crystal frequency.
     def prepare_target(self, operation, address=None, clock=0, reset=True):
+        """!
+        This function sets up target clocks to ensure that flash is clocked at the maximum
+        of 24MHz. Doing so gets the best flash programming performance. The FIRC clock source
+        is used so that there is no dependency on an external crystal frequency.
+        """
         super(Flash_kl28z, self).init(operation, address, clock, reset)
 
         # Enable FIRC.
@@ -150,11 +153,10 @@ class Flash_kl28z(Flash_Kinetis):
         self.target.write32(SCG_RCCR, (0x3 << SCS_SHIFT) | (1 << DIVSLOW_SHIFT))
 
         csr = self.target.read32(SCG_CSR)
-        logging.debug("SCG_CSR = 0x%08x", csr)
+        LOG.debug("SCG_CSR = 0x%08x", csr)
 
-    ##
-    # Restore clock registers to original values.
     def restore_target(self):
+        """! Restore clock registers to original values."""
         self.target.write32(SCG_FIRCCSR, self._saved_firccsr)
         self.target.write32(SCG_RCCR, self._saved_rccr)
 
@@ -204,18 +206,18 @@ class KL28x(Kinetis):
 
         return seq
 
-    ## @brief Set the fixed list of valid AP numbers for KL28.
     def create_kl28_aps(self):
+        """! @brief Set the fixed list of valid AP numbers for KL28."""
         self.dp.valid_aps = [0, 1, 2]
         
     def detect_dual_core(self):
         # Check if this is the dual core part.
         sdid = self.aps[0].read_memory(SIM_SDID)
         keyattr = (sdid & SIM_SDID_KEYATTR_MASK) >> SIM_SDID_KEYATTR_SHIFT
-        logging.debug("KEYATTR=0x%x SDID=0x%08x", keyattr, sdid)
+        LOG.debug("KEYATTR=0x%x SDID=0x%08x", keyattr, sdid)
         self.is_dual_core = (keyattr == KEYATTR_DUAL_CORE)
         if self.is_dual_core:
-            logging.info("KL28 is dual core")
+            LOG.info("KL28 is dual core")
             self.memory_map = self.dualMap
 
     def disable_rom_remap(self):

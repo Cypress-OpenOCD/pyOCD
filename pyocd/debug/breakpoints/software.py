@@ -1,5 +1,5 @@
 # pyOCD debugger
-# Copyright (c) 2015-2017 Arm Limited
+# Copyright (c) 2015-2019 Arm Limited
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@ from ...core import exceptions
 from ...core.target import Target
 import logging
 
+LOG = logging.getLogger(__name__)
+
 class SoftwareBreakpoint(Breakpoint):
     def __init__(self, provider):
         super(SoftwareBreakpoint, self).__init__(provider)
@@ -36,6 +38,7 @@ class SoftwareBreakpointProvider(BreakpointProvider):
     def init(self):
         pass
 
+    @property
     def bp_type(self):
         return Target.BREAKPOINT_SW
 
@@ -43,6 +46,7 @@ class SoftwareBreakpointProvider(BreakpointProvider):
     def do_filter_memory(self):
         return True
 
+    @property
     def available_breakpoints(self):
         return -1
 
@@ -70,7 +74,7 @@ class SoftwareBreakpointProvider(BreakpointProvider):
             self._breakpoints[addr] = bp
             return bp
         except exceptions.TransferError:
-            logging.debug("Failed to set sw bp at 0x%x" % addr)
+            LOG.debug("Failed to set sw bp at 0x%x" % addr)
             return None
 
     def remove_breakpoint(self, bp):
@@ -83,7 +87,7 @@ class SoftwareBreakpointProvider(BreakpointProvider):
             # Remove from our list.
             del self._breakpoints[bp.addr]
         except exceptions.TransferError:
-            logging.debug("Failed to remove sw bp at 0x%x" % bp.addr)
+            LOG.debug("Failed to remove sw bp at 0x%x" % bp.addr)
 
     def filter_memory(self, addr, size, data):
         for bp in self._breakpoints.values():

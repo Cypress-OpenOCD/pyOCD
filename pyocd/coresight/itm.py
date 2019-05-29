@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 from ..core.target import Target
 from ..core import exceptions
 from .component import CoreSightComponent
@@ -80,7 +78,7 @@ class ITM(CoreSightComponent):
             self.ap.write32(self.address + ITM.LAR, ITM.LAR_KEY)
             val = self.ap.read32(self.address + ITM.LSR)
             if val & ITM.LSR_SLK_MASK:
-                raise exceptions.Error("Failed to unlock ITM")
+                raise exceptions.DebugError("Failed to unlock ITM")
         
         # Disable the ITM until enabled.
         self.disable()

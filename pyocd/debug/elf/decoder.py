@@ -23,6 +23,8 @@ from collections import namedtuple
 from itertools import islice
 import logging
 
+LOG = logging.getLogger(__name__)
+
 FunctionInfo = namedtuple('FunctionInfo', 'name subprogram low_pc high_pc')
 LineInfo = namedtuple('LineInfo', 'cu filename dirname line')
 SymbolInfo = namedtuple('SymbolInfo', 'name address size type')
@@ -104,20 +106,19 @@ class DwarfAddressDecoder(object):
     def __init__(self, elf):
         assert isinstance(elf, ELFFile)
         self.elffile = elf
+        self.dwarfinfo = None
 
-        if not self.elffile.has_dwarf_info():
-            raise Exception("No DWARF debug info available")
+        self.subprograms = []
+        self.function_tree = IntervalTree()
+        self.line_tree = IntervalTree()
 
-        self.dwarfinfo = self.elffile.get_dwarf_info()
+        if self.elffile.has_dwarf_info():
+            self.dwarfinfo = self.elffile.get_dwarf_info()
 
-        self.subprograms = None
-        self.function_tree = None
-        self.line_tree = None
-
-        # Build indices.
-        self._get_subprograms()
-        self._build_function_search_tree()
-        self._build_line_search_tree()
+            # Build indices.
+            self._get_subprograms()
+            self._build_function_search_tree()
+            self._build_line_search_tree()
 
     def get_function_for_address(self, addr):
         try:
@@ -132,12 +133,10 @@ class DwarfAddressDecoder(object):
             return None
 
     def _get_subprograms(self):
-        self.subprograms = []
         for CU in self.dwarfinfo.iter_CUs():
             self.subprograms.extend([d for d in CU.iter_DIEs() if d.tag == 'DW_TAG_subprogram'])
 
     def _build_function_search_tree(self):
-        self.function_tree = IntervalTree()
         for prog in self.subprograms:
             try:
                 name = prog.attributes['DW_AT_name'].value
@@ -160,7 +159,6 @@ class DwarfAddressDecoder(object):
                 pass
 
     def _build_line_search_tree(self):
-        self.line_tree = IntervalTree()
         for cu in self.dwarfinfo.iter_CUs():
             lineprog = self.dwarfinfo.line_program_for_CU(cu)
             prevstate = None
@@ -200,7 +198,7 @@ class DwarfAddressDecoder(object):
                                 toAddr += 1
                             self.line_tree.addi(fromAddr, toAddr, info)
                     except:
-                        logging.debug("Problematic lineprog:")
+                        LOG.debug("Problematic lineprog:")
                         self._dump_lineprog(lineprog)
                         raise
 
@@ -214,9 +212,9 @@ class DwarfAddressDecoder(object):
         for i, e in enumerate(lineprog.get_entries()):
             s = e.state
             if s is None:
-                logging.debug("%d: cmd=%d ext=%d args=%s", i, e.command, int(e.is_extended), repr(e.args))
+                LOG.debug("%d: cmd=%d ext=%d args=%s", i, e.command, int(e.is_extended), repr(e.args))
             else:
-                logging.debug("%d: %06x %4d stmt=%1d block=%1d end=%d file=[%d]%s", i, s.address, s.line, s.is_stmt, int(s.basic_block), int(s.end_sequence), s.file, lineprog['file_entry'][s.file-1].name)
+                LOG.debug("%d: %06x %4d stmt=%1d block=%1d end=%d file=[%d]%s", i, s.address, s.line, s.is_stmt, int(s.basic_block), int(s.end_sequence), s.file, lineprog['file_entry'][s.file-1].name)
 
     def dump_subprograms(self):
         for prog in self.subprograms:
@@ -230,6 +228,6 @@ class DwarfAddressDecoder(object):
             except KeyError:
                 high_pc = 0xffffffff
             filename = os.path.basename(prog._parent.attributes['DW_AT_name'].value.replace('\\', '/'))
-            logging.debug("%s%s%08x %08x %s", name, (' ' * (50-len(name))), low_pc, high_pc, filename)
+            LOG.debug("%s%s%08x %08x %s", name, (' ' * (50-len(name))), low_pc, high_pc, filename)
 
 

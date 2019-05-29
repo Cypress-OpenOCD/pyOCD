@@ -26,22 +26,19 @@ import six
 
 OPEN_TIMEOUT_S = 60.0
 
-log = logging.getLogger('pywinusb')
+LOG = logging.getLogger(__name__)
 
 try:
     import pywinusb.hid as hid
 except:
     if os.name == "nt":
-        log.error("PyWinUSB is required on a Windows Machine")
+        LOG.error("PyWinUSB is required on a Windows Machine")
     IS_AVAILABLE = False
 else:
     IS_AVAILABLE = True
 
 class PyWinUSB(Interface):
-    """
-    This class provides basic functions to access
-    a USB HID device using pywinusb:
-        - write/read an endpoint
+    """! @brief CMSIS-DAP USB interface class using pyWinUSB for the backend.
     """
 
     isAvailable = IS_AVAILABLE
@@ -97,8 +94,7 @@ class PyWinUSB(Interface):
 
     @staticmethod
     def get_all_connected_interfaces():
-        """
-        returns all the connected CMSIS-DAP devices
+        """! @brief Returns all the connected CMSIS-DAP devices
         """
         all_devices = hid.find_all_hid_devices()
 
@@ -134,14 +130,13 @@ class PyWinUSB(Interface):
                 boards.append(new_board)
             except Exception as e:
                 if (str(e) != "Failure to get HID pre parsed data"):
-                    log.error("Receiving Exception: %s", e)
+                    LOG.error("Receiving Exception: %s", e)
                 dev.close()
 
         return boards
 
     def write(self, data):
-        """
-        write data on the OUT endpoint associated to the HID interface
+        """! @brief Write data on the OUT endpoint associated to the HID interface
         """
         for _ in range(self.packet_size - len(data)):
             data.append(0)
@@ -151,8 +146,7 @@ class PyWinUSB(Interface):
 
 
     def read(self, timeout=20.0):
-        """
-        read data on the IN endpoint associated to the HID interface
+        """! @brief Read data on the IN endpoint associated to the HID interface
         """
         start = time()
         while len(self.rcv_data) == 0:
@@ -179,8 +173,7 @@ class PyWinUSB(Interface):
         return self.serial_number
 
     def close(self):
+        """! @brief Close the interface
         """
-        close the interface
-        """
-        log.debug("closing interface")
+        LOG.debug("closing interface")
         self.device.close()

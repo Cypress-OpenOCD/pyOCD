@@ -132,7 +132,7 @@ class cy8c64xx(CoreSightTarget):
         self.dp.valid_aps = (self.AP_NUM,)
 
     def create_cy8c6xx7_core(self):
-        core = CortexM_CY8C64xx(self, self.aps[self.AP_NUM], self.memory_map, 0)
+        core = CortexM_CY8C64xx(self.session, self.aps[self.AP_NUM], self.memory_map, 0)
         core.default_reset_type = self.ResetType.SW_SYSRESETREQ
         self.aps[self.AP_NUM].core = core
         core.init()
@@ -370,7 +370,7 @@ class cy8c64xx_cm4_full(CoreSightTarget):
         self.dp.valid_aps = (self.AP_NUM,)
 
     def create_cy8c6xx7_core(self):
-        core = CortexM_CY8C64xx_full(self, self.aps[self.AP_NUM], self.memory_map, 0)
+        core = CortexM_CY8C64xx_full(self.session, self.aps[self.AP_NUM], self.memory_map, 0)
         core.default_reset_type = self.ResetType.SW_SYSRESETREQ
         self.aps[self.AP_NUM].core = core
         core.init()

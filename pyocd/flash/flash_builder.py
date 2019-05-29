@@ -180,6 +180,9 @@ class FlashBuilder(object):
         @param addr Base address of the block of data passed to this method. The entire block of
             data must be contained within the flash memory region associated with this instance.
         @param data Data to be programmed. Should be a list of byte values.
+        
+        @exception ValueError Attempt to add overlapping data, or address range of added data is
+            outside the address range of the flash region associated with the builder.
         """
         # Ignore empty data.
         if len(data) == 0:
@@ -187,7 +190,7 @@ class FlashBuilder(object):
         
         # Sanity check
         if not self.flash.region.contains_range(start=addr, length=len(data)):
-            raise FlashFailure("Flash address range 0x%x-0x%x is not contained within region '%s'" %
+            raise ValueError("Flash address range 0x%x-0x%x is not contained within region '%s'" %
                 (addr, addr + len(data) - 1, self.flash.region.name))
 
         # Add operation to list
@@ -225,6 +228,8 @@ class FlashBuilder(object):
         @param keep_unwritten If true, unwritten pages in an erased sector and unwritten
             contents of a modified page will be read from the target and added to the data to be
             programmed.
+
+        @exception FlashFailure Could not get sector or page info for an address.
         """
         assert len(self.flash_operation_list) > 0
         
@@ -245,6 +250,19 @@ class FlashBuilder(object):
         current_sector.add_page(current_page)
         self.page_list.append(current_page)
         
+        def fill_end_of_page_gap():
+            # Fill the gap at the end of the soon to be previous page if there is one
+            if len(current_page.data) != current_page.size:
+                page_data_end = current_page.addr + len(current_page.data)
+                old_data_len = current_page.size - len(current_page.data)
+                if keep_unwritten and self.flash.region.is_readable:
+                    self._enable_read_access()
+                    old_data = self.flash.target.read_memory_block8(page_data_end, old_data_len)
+                else:
+                    old_data = [self.flash.region.erased_byte_value] * old_data_len
+                current_page.data.extend(old_data)
+                self.program_byte_count += old_data_len
+        
         for flash_operation in self.flash_operation_list:
             pos = 0
             while pos < len(flash_operation.data):
@@ -260,6 +278,10 @@ class FlashBuilder(object):
 
                 # Check if operation is in a different page
                 if flash_addr >= current_page.addr + current_page.size:
+                    # Fill any gap at the end of the current page before switching to a new page.
+                    fill_end_of_page_gap()
+                    
+                    # Create the new page.
                     page_info = self.flash.get_page_info(flash_addr)
                     if page_info is None:
                         raise FlashFailure("Attempt to program flash at invalid address 0x%08x" % flash_addr)
@@ -271,7 +293,7 @@ class FlashBuilder(object):
                 page_data_end = current_page.addr + len(current_page.data)
                 if flash_addr != page_data_end:
                     old_data_len = flash_addr - page_data_end
-                    if keep_unwritten:
+                    if keep_unwritten and self.flash.region.is_readable:
                         self._enable_read_access()
                         old_data = self.flash.target.read_memory_block8(page_data_end, old_data_len)
                     else:
@@ -290,16 +312,7 @@ class FlashBuilder(object):
                 pos += amount
 
         # Fill the page gap at the end if there is one
-        if len(current_page.data) != current_page.size:
-            page_data_end = current_page.addr + len(current_page.data)
-            old_data_len = current_page.size - len(current_page.data)
-            if keep_unwritten and self.flash.region.is_readable:
-                self._enable_read_access()
-                old_data = self.flash.target.read_memory_block8(page_data_end, old_data_len)
-            else:
-                old_data = [self.flash.region.erased_byte_value] * old_data_len
-            current_page.data.extend(old_data)
-            self.program_byte_count += old_data_len
+        fill_end_of_page_gap()
         
         # Go back through sectors and fill any missing pages with existing data.
         if keep_unwritten and self.flash.region.is_readable:
@@ -346,8 +359,9 @@ class FlashBuilder(object):
         Data must have already been added with add_data().
         
         @param self
-        @param chip_erase A value of True forces chip erase, False forces sector erase, and a
-            value of None means that the estimated fastest method should be used.
+        @param chip_erase A value of "chip" forces chip erase, "sector" forces sector erase, and a
+            value of "auto" means that the estimated fastest method should be used. If not
+            specified, the default is auto.
         @param progress_cb A callable that accepts a single parameter of the percentage complete.
         @param smart_flash If True, FlashBuilder will scan target memory to attempt to avoid
             programming contents that are not changing with this program request. False forces
@@ -364,7 +378,7 @@ class FlashBuilder(object):
         """
 
         # Send notification that we're about to program flash.
-        self.flash.target.notify(Notification(event=Target.EVENT_PRE_FLASH_PROGRAM, source=self))
+        self.flash.target.session.notify(Target.EVENT_PRE_FLASH_PROGRAM, self)
 
         # Examples
         # - lpc4330     -Non 0 base address
@@ -379,6 +393,16 @@ class FlashBuilder(object):
         if len(self.flash_operation_list) == 0:
             LOG.warning("No pages were programmed")
             return
+        
+        # Convert chip_erase.
+        if (chip_erase is None) or (chip_erase == "auto"):
+            chip_erase = None
+        elif chip_erase == "sector":
+            chip_erase = False
+        elif chip_erase == "chip":
+            chip_erase = True
+        else:
+            raise ValueError("invalid chip_erase value '{}'".format(chip_erase))
 
         # Convert the list of flash operations into flash sectors and pages
         self._build_sectors_and_pages(keep_unwritten)
@@ -482,7 +506,7 @@ class FlashBuilder(object):
                     ((self.program_byte_count/1024) / self.perf.program_time))
 
         # Send notification that we're done programming flash.
-        self.flash.target.notify(Notification(event=Target.EVENT_POST_FLASH_PROGRAM, source=self))
+        self.flash.target.session.notify(Target.EVENT_POST_FLASH_PROGRAM, self)
 
         return self.perf
 

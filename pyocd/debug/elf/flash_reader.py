@@ -1,5 +1,5 @@
 # pyOCD debugger
-# Copyright (c) 2016 Arm Limited
+# Copyright (c) 2016-2019 Arm Limited
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,13 +19,14 @@ from ...utility import conversion
 import logging
 from intervaltree import (Interval, IntervalTree)
 
-## @brief Reads flash memory regions from an ELF file instead of the target.
+LOG = logging.getLogger(__name__)
+
 class FlashReaderContext(DebugContext):
-    def __init__(self, parentContext, elf):
-        super(FlashReaderContext, self).__init__(parentContext.core)
-        self._parent = parentContext
+    """! @brief Reads flash memory regions from an ELF file instead of the target."""
+
+    def __init__(self, parent, elf):
+        super(FlashReaderContext, self).__init__(parent)
         self._elf = elf
-        self._log = logging.getLogger('flashreadercontext')
 
         self._build_regions()
 
@@ -36,7 +37,7 @@ class FlashReaderContext(DebugContext):
             length = sect.length
             sect.data # Go ahead and read the data from the file.
             self._tree.addi(start, start + length, sect)
-            self._log.debug("created flash section [%x:%x] for section %s", start, start + length, sect.name)
+            LOG.debug("created flash section [%x:%x] for section %s", start, start + length, sect.name)
 
     def read_memory(self, addr, transfer_size=32, now=True):
         length = transfer_size // 8
@@ -48,7 +49,7 @@ class FlashReaderContext(DebugContext):
         addr -= section.start
 
         def read_memory_cb():
-            self._log.debug("read flash data [%x:%x] from section %s", section.start + addr, section.start + addr  + length, section.name)
+            LOG.debug("read flash data [%x:%x] from section %s", section.start + addr, section.start + addr  + length, section.name)
             data = section.data[addr:addr + length]
             if transfer_size == 8:
                 return data[0]
@@ -72,18 +73,9 @@ class FlashReaderContext(DebugContext):
         section = matches.pop().data
         addr -= section.start
         data = section.data[addr:addr + size]
-        self._log.debug("read flash data [%x:%x]", section.start + addr, section.start + addr  + size)
+        LOG.debug("read flash data [%x:%x]", section.start + addr, section.start + addr  + size)
         return list(data)
 
     def read_memory_block32(self, addr, size):
         return conversion.byte_list_to_u32le_list(self.read_memory_block8(addr, size))
-
-    def write_memory(self, addr, value, transfer_size=32):
-        return self._parent.write_memory(addr, value, transfer_size)
-
-    def write_memory_block8(self, addr, value):
-        return self._parent.write_memory_block8(addr, value)
-
-    def write_memory_block32(self, addr, data):
-        return self._parent.write_memory_block32(addr, data)
 

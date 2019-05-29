@@ -22,8 +22,9 @@ import os
 import sys
 import optparse
 from optparse import make_option
-import traceback
 import six
+import prettytable
+import traceback
 
 # Attempt to import readline.
 try:
@@ -34,7 +35,7 @@ except ImportError:
 from .. import __version__
 from .. import (utility, coresight)
 from ..core.helpers import ConnectHelper
-from ..core import exceptions
+from ..core import (exceptions, session)
 from ..target.family import target_kinetis
 from ..probe.pydapaccess import DAPAccess
 from ..probe.debug_probe import DebugProbe
@@ -52,6 +53,8 @@ try:
     isCapstoneAvailable = True # pylint: disable=invalid-name
 except ImportError:
     isCapstoneAvailable = False # pylint: disable=invalid-name
+
+LOG = logging.getLogger(__name__)
 
 LEVELS = {
         'debug':logging.DEBUG,
@@ -466,17 +469,20 @@ class PyOCDConsole(object):
             handler(args)
         except ValueError:
             print("Error: invalid argument")
-            traceback.print_exc()
+            if session.Session.get_current().log_tracebacks:
+                traceback.print_exc()
         except exceptions.TransferError as e:
             print("Error:", e)
-            traceback.print_exc()
+            if session.Session.get_current().log_tracebacks:
+                traceback.print_exc()
         except ToolError as e:
             print("Error:", e)
         except ToolExitException:
             raise
         except Exception as e:
             print("Unexpected exception:", e)
-            traceback.print_exc()
+            if session.Session.get_current().log_tracebacks:
+                traceback.print_exc()
 
 class PyOCDCommander(object):
     def __init__(self, args, cmds=None):
@@ -653,10 +659,12 @@ class PyOCDCommander(object):
             self.exit_code = 0
         except ValueError:
             print("Error: invalid argument")
-            traceback.print_exc()
+            if session.Session.get_current().log_tracebacks:
+                traceback.print_exc()
         except exceptions.TransferError:
             print("Error: transfer failed")
-            traceback.print_exc()
+            if session.Session.get_current().log_tracebacks:
+                traceback.print_exc()
             self.exit_code = 2
         except ToolError as e:
             print("Error:", e)
@@ -668,7 +676,7 @@ class PyOCDCommander(object):
         return self.exit_code
 
     def connect(self):
-        if self.args.frequency != DEFAULT_CLOCK_FREQ_HZ:
+        if (self.args.frequency is not None) and (self.args.frequency != DEFAULT_CLOCK_FREQ_HZ):
             print("Setting SWD clock to %d kHz" % (self.args.frequency // 1000))
 
         # Connect to board.
@@ -681,12 +689,13 @@ class PyOCDCommander(object):
                         pack=self.args.pack,
                         unique_id=self.args.unique_id,
                         target_override=self.args.target_override,
-                        init_board=False,
-                        auto_unlock=False,
                         halt_on_connect=self.args.halt,
-                        resume_on_disconnect=False,
                         frequency=self.args.frequency,
-                        **convert_session_options(self.args.options))
+                        options=convert_session_options(self.args.options),
+                        option_defaults=dict(
+                            auto_unlock=False,
+                            resume_on_disconnect=False,
+                            ))
         if self.session is None:
             self.exit_code = 3
             return False
@@ -696,12 +705,14 @@ class PyOCDCommander(object):
         except exceptions.TransferFaultError as e:
             if not self.board.target.is_locked():
                 print("Transfer fault while initing board: %s" % e)
-                traceback.print_exc()
+                if session.Session.get_current().log_tracebacks:
+                    traceback.print_exc()
                 self.exit_code = 1
                 return False
         except Exception as e:
             print("Exception while initing board: %s" % e)
-            traceback.print_exc()
+            if session.Session.get_current().log_tracebacks:
+                traceback.print_exc()
             self.exit_code = 1
             return False
 
@@ -1147,7 +1158,8 @@ class PyOCDCommander(object):
                     print(result)
         except Exception as e:
             print("Exception while executing expression:", e)
-            traceback.print_exc()
+            if session.Session.get_current().log_tracebacks:
+                traceback.print_exc()
 
     def handle_core(self, args):
         if len(args) < 1:
@@ -1312,15 +1324,20 @@ class PyOCDCommander(object):
                 print("Core %d type:  %s" % (i, coresight.cortex_m.CORE_TYPE_NAME[core.core_type]))
 
     def handle_show_map(self, args):
-        print("Region          Start         End                 Size    Access    Blocksize")
+        pt = prettytable.PrettyTable(["Region", "Start", "End", "Size", "Access", "Sector", "Page"])
+        pt.align = 'l'
+        pt.border = False
         for region in self.target.get_memory_map():
-            print("{:<15} {:#010x}    {:#010x}    {:#10x}    {:<9} {}".format(
+            pt.add_row([
                 region.name,
-                region.start,
-                region.end,
-                region.length,
+                "0x%08x" % region.start,
+                "0x%08x" % region.end,
+                "0x%08x" % region.length,
                 region.access,
-                region.blocksize if region.is_flash else '-'))
+                ("0x%08x" % region.sector_size) if region.is_flash else '-',
+                ("0x%08x" % region.page_size) if region.is_flash else '-',
+                ])
+        print(pt)
 
     def handle_show_peripherals(self, args):
         for periph in sorted(self.peripherals.values(), key=lambda x:x.base_address):
@@ -1578,14 +1595,15 @@ Prefix line with ! to execute a shell command.""")
 
         return region.contains_range(addr, length=l)
 
-    ## @brief Convert an argument to a 32-bit integer.
-    #
-    # Handles the usual decimal, binary, and hex numbers with the appropriate prefix.
-    # Also recognizes register names and address dereferencing. Dereferencing using the
-    # ARM assembler syntax. To dereference, put the value in brackets, i.e. '[r0]' or
-    # '[0x1040]'. You can also use put an offset in the brackets after a comma, such as
-    # '[r3,8]'. The offset can be positive or negative, and any supported base.
     def convert_value(self, arg):
+        """! @brief Convert an argument to a 32-bit integer.
+        
+        Handles the usual decimal, binary, and hex numbers with the appropriate prefix.
+        Also recognizes register names and address dereferencing. Dereferencing using the
+        ARM assembler syntax. To dereference, put the value in brackets, i.e. '[r0]' or
+        '[0x1040]'. You can also use put an offset in the brackets after a comma, such as
+        '[r3,8]'. The offset can be positive or negative, and any supported base.
+        """
         deref = (arg[0] == '[')
         if deref:
             arg = arg[1:-1]
@@ -1708,14 +1726,14 @@ class PyOCDTool(object):
 
         parser = argparse.ArgumentParser(description='Target inspection utility', epilog=epi)
         parser.add_argument('--version', action='version', version=__version__)
-        parser.add_argument('-j', '--dir', metavar="PATH", dest="project_dir", default=os.getcwd(),
+        parser.add_argument('-j', '--dir', metavar="PATH", dest="project_dir",
             help="Set the project directory. Defaults to the directory where pyocd was run.")
         parser.add_argument('--config', metavar="PATH", default=None, help="Use a YAML config file.")
-        parser.add_argument("--no-config", action="store_true", help="Do not use a configuration file.")
+        parser.add_argument("--no-config", action="store_true", default=None, help="Do not use a configuration file.")
         parser.add_argument('--script', metavar="PATH",
             help="Use the specified user script. Defaults to pyocd_user.py.")
         parser.add_argument("--pack", metavar="PATH", help="Path to a CMSIS Device Family Pack")
-        parser.add_argument("-H", "--halt", action="store_true", help="Halt core upon connect.")
+        parser.add_argument("-H", "--halt", action="store_true", default=None, help="Halt core upon connect.")
         parser.add_argument("-N", "--no-init", action="store_true", help="Do not init debug system.")
         parser.add_argument('-k', "--clock", metavar='KHZ', default=(DEFAULT_CLOCK_FREQ_HZ // 1000), type=int, help="Set SWD speed in kHz. (Default 1 MHz.)")
         parser.add_argument('-b', "--board", action='store', dest="unique_id", metavar='ID', help="Use the specified board. Only a unique part of the board ID needs to be provided.")
@@ -1748,7 +1766,7 @@ class PyOCDTool(object):
         DAPAccess.set_args(self.args.daparg)
         
         if not self.args.no_deprecation_warning:
-            logging.warning("pyocd-tool is deprecated; please use the new combined pyocd tool.")
+            LOG.warning("pyocd-tool is deprecated; please use the new combined pyocd tool.")
         
         # Convert args to new names.
         self.args.target_override = self.args.target

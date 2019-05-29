@@ -31,6 +31,7 @@ import cmsis_pack_manager
 from . import __version__
 from .core.session import Session
 from .core.helpers import ConnectHelper
+from .core import exceptions
 from .target import TARGET
 from .target.pack import pack_target
 from .gdbserver import GDBServer
@@ -66,12 +67,12 @@ DEFAULT_CMD_LOG_LEVEL = {
     'pack':         logging.INFO,
     }
 
-## @brief map to convert erase mode to chip_erase option for gdbserver.
-ERASE_OPTIONS = {
-    'auto': None,
-    'chip': True,
-    'sector': False,
-    }
+## @brief Valid erase mode options.
+ERASE_OPTIONS = [
+    'auto',
+    'chip',
+    'sector',
+    ]
 
 def convert_frequency(value):
     """! @brief Applies scale suffix to frequency value string."""
@@ -114,7 +115,7 @@ class PyOCDTool(object):
         
         parser.add_argument('-V', '--version', action='version', version=__version__)
         parser.add_argument('--help-options', action='store_true',
-            help="Display available session options.")
+            help="Display available user options.")
         
         # Define logging related options.
         loggingOptions = argparse.ArgumentParser(description='logging', add_help=False)
@@ -125,11 +126,11 @@ class PyOCDTool(object):
         
         # Define common options for all subcommands, excluding --verbose and --quiet.
         commonOptionsNoLogging = argparse.ArgumentParser(description='common', add_help=False)
-        commonOptionsNoLogging.add_argument('-j', '--dir', metavar="PATH", dest="project_dir", default=os.getcwd(),
+        commonOptionsNoLogging.add_argument('-j', '--dir', metavar="PATH", dest="project_dir",
             help="Set the project directory. Defaults to the directory where pyocd was run.")
         commonOptionsNoLogging.add_argument('--config', metavar="PATH",
             help="Specify YAML configuration file. Default is pyocd.yaml or pyocd.yml.")
-        commonOptionsNoLogging.add_argument("--no-config", action="store_true",
+        commonOptionsNoLogging.add_argument("--no-config", action="store_true", default=None,
             help="Do not use a configuration file.")
         commonOptionsNoLogging.add_argument('--script', metavar="PATH",
             help="Use the specified user script. Defaults to pyocd_user.py.")
@@ -152,14 +153,14 @@ class PyOCDTool(object):
             help="Set the board type (not yet implemented).")
         connectOptions.add_argument("-t", "--target", dest="target_override", metavar="TARGET",
             help="Set the target type.")
-        connectOptions.add_argument("-f", "--frequency", dest="frequency", default=1000000, type=convert_frequency,
+        connectOptions.add_argument("-f", "--frequency", dest="frequency", default=None, type=convert_frequency,
             help="SWD/JTAG clock frequency in Hz, with optional k/K or m/M suffix for kHz or MHz.")
         connectOptions.add_argument("-W", "--no-wait", action="store_true",
             help="Do not wait for a probe to be connected if none are available.")
 
         # Create *commander* subcommand parser.
         commandOptions = argparse.ArgumentParser(description='command', add_help=False)
-        commandOptions.add_argument("-H", "--halt", action="store_true",
+        commandOptions.add_argument("-H", "--halt", action="store_true", default=None,
             help="Halt core upon connect.")
         commandOptions.add_argument("-N", "--no-init", action="store_true",
             help="Do not init debug system.")
@@ -196,7 +197,7 @@ class PyOCDTool(object):
         # Create *flash* subcommand parser.
         flashParser = subparsers.add_parser('flash', parents=[commonOptions, connectOptions],
             help="Program an image to device flash.")
-        flashParser.add_argument("-e", "--erase", choices=ERASE_OPTIONS.keys(), default='sector',
+        flashParser.add_argument("-e", "--erase", choices=ERASE_OPTIONS, default='sector',
             help="Choose flash erase method. Default is sector.")
         flashParser.add_argument("-a", "--base-address", metavar="ADDR", type=int_base_0,
             help="Base address used for the address where to flash a binary. Defaults to start of flash.")
@@ -221,7 +222,7 @@ class PyOCDTool(object):
             help="Keep GDB server running even after remote has detached.")
         gdbserverOptions.add_argument("--elf", metavar="PATH",
             help="Optionally specify ELF file being debugged.")
-        gdbserverOptions.add_argument("-e", "--erase", choices=ERASE_OPTIONS.keys(), default='sector',
+        gdbserverOptions.add_argument("-e", "--erase", choices=ERASE_OPTIONS, default='sector',
             help="Choose flash erase method. Default is sector.")
         gdbserverOptions.add_argument("--trust-crc", action="store_true",
             help="Use only the CRC of each page to determine if it already has the same data.")
@@ -265,7 +266,13 @@ class PyOCDTool(object):
         group.add_argument('-b', '--boards', action='store_true',
             help="List all known boards.")
         listParser.add_argument('-n', '--name',
-            help="Restrict listing to items matching the given name.")
+            help="Restrict listing to items matching the given name. Applies to targets and boards.")
+        listParser.add_argument('-r', '--vendor',
+            help="Restrict listing to items whose vendor matches the given name. Applies to targets.")
+        listParser.add_argument('-s', '--source', choices=('builtin', 'pack'),
+            help="Restrict listing to targets from the specified source. Applies to targets.")
+        listParser.add_argument('-H', '--no-header', action='store_true',
+            help="Don't print a table header.")
 
         # Create *pack* subcommand parser.
         packParser = subparsers.add_parser('pack', parents=[loggingOptions],
@@ -275,7 +282,7 @@ class PyOCDTool(object):
         packParser.add_argument("-u", "--update", action='store_true',
             help="Update the pack index.")
         packParser.add_argument("-s", "--show", action='store_true',
-            help="Show the list of installed devices and packs.")
+            help="Show the list of installed packs.")
         packParser.add_argument("-f", "--find", dest="find_devices", metavar="GLOB", action='append',
             help="Look up a device part number in the index using a glob pattern. The pattern is "
                 "suffixed with '*'. Can be specified multiple times.")
@@ -284,6 +291,8 @@ class PyOCDTool(object):
                 "The pattern is suffixed with '*'. Can be specified multiple times.")
         packParser.add_argument("-n", "--no-download", action='store_true',
             help="Just list the pack(s) that would be downloaded, don't actually download anything.")
+        packParser.add_argument('-H', '--no-header', action='store_true',
+            help="Don't print a table header.")
         
         self._parser = parser
         return parser
@@ -332,8 +341,11 @@ class PyOCDTool(object):
             return 0
         except KeyboardInterrupt:
             return 0
+        except (exceptions.Error, ValueError, IndexError) as e:
+            LOG.critical(e, exc_info=Session.get_current().log_tracebacks)
+            return 1
         except Exception as e:
-            LOG.error("uncaught exception: %s", e, exc_info=True)
+            LOG.critical("uncaught exception: %s", e, exc_info=Session.get_current().log_tracebacks)
             return 1
     
     def show_options_help(self):
@@ -353,14 +365,16 @@ class PyOCDTool(object):
         """! @brief Returns a PrettyTable object with formatting options set."""
         pt = prettytable.PrettyTable(fields)
         pt.align = 'l'
-        pt.border = False
-        pt.header_style = "upper"
+        pt.header = not self._args.no_header
+        pt.border = True
+        pt.hrules = prettytable.HEADER
+        pt.vrules = prettytable.NONE
         return pt
     
     def do_list(self):
         """! @brief Handle 'list' subcommand."""
         # Default to listing probes.
-        if (self._args.probes, self._args.targets, self._args.boards) == (False, False, False):
+        if not any((self._args.probes, self._args.targets, self._args.boards)):
             self._args.probes = True
         
         # Create a session with no device so we load any config.
@@ -376,10 +390,12 @@ class PyOCDTool(object):
             ConnectHelper.list_connected_probes()
         elif self._args.targets:
             # Create targets from provided CMSIS pack.
-            if ('pack' in session.options) and (session.options['pack'] is not None):
-                pack_target.populate_targets_from_pack(session.options['pack'])
+            if session.options['pack'] is not None:
+                pack_target.PackTargets.populate_targets_from_pack(session.options['pack'])
 
-            obj = ListGenerator.list_targets()
+            obj = ListGenerator.list_targets(name_filter=self._args.name,
+                                            vendor_filter=self._args.vendor,
+                                            source_filter=self._args.source)
             pt = self._get_pretty_table(["Name", "Vendor", "Part Number", "Families", "Source"])
             for info in sorted(obj['targets'], key=lambda i: i['name']):
                 pt.add_row([
@@ -391,7 +407,7 @@ class PyOCDTool(object):
                             ])
             print(pt)
         elif self._args.boards:
-            obj = ListGenerator.list_boards()
+            obj = ListGenerator.list_boards(name_filter=self._args.name)
             pt = self._get_pretty_table(["ID", "Name", "Target", "Test Binary"])
             for info in sorted(obj['boards'], key=lambda i: i['id']):
                 pt.add_row([
@@ -405,7 +421,7 @@ class PyOCDTool(object):
     def do_json(self):
         """! @brief Handle 'json' subcommand."""
         # Default to listing probes.
-        if (self._args.probes, self._args.targets, self._args.boards) == (False, False, False):
+        if not any((self._args.probes, self._args.targets, self._args.boards)):
             self._args.probes = True
         
         # Create a session with no device so we load any config.
@@ -417,23 +433,24 @@ class PyOCDTool(object):
                             **convert_session_options(self._args.options)
                             )
         
+        if self._args.targets or self._args.boards:
+            # Create targets from provided CMSIS pack.
+            if session.options['pack'] is not None:
+                pack_target.PackTargets.populate_targets_from_pack(session.options['pack'])
+
         if self._args.probes:
             obj = ListGenerator.list_probes()
-            print(json.dumps(obj, indent=4))
         elif self._args.targets:
-            # Create targets from provided CMSIS pack.
-            if ('pack' in session.options) and (session.options['pack'] is not None):
-                pack_target.populate_targets_from_pack(session.options['pack'])
-
             obj = ListGenerator.list_targets()
-            print(json.dumps(obj, indent=4))
         elif self._args.boards:
             obj = ListGenerator.list_boards()
-            print(json.dumps(obj, indent=4))
+        else:
+            assert False
+        print(json.dumps(obj, indent=4))
     
     def do_flash(self):
         """! @brief Handle 'flash' subcommand."""
-        self._increase_logging(["pyocd.tools.loader", "pyocd", "pyocd.flash", "pyocd.flash.flash", "pyocd.flash.flash_builder"])
+        self._increase_logging(["pyocd.flash.loader"])
         
         session = ConnectHelper.session_with_chosen_probe(
                             project_dir=self._args.project_dir,
@@ -445,12 +462,12 @@ class PyOCDTool(object):
                             target_override=self._args.target_override,
                             frequency=self._args.frequency,
                             blocking=False,
-                            **convert_session_options(self._args.options))
+                            options=convert_session_options(self._args.options))
         if session is None:
             sys.exit(1)
         with session:
             programmer = loader.FileProgrammer(session,
-                                                chip_erase=ERASE_OPTIONS[self._args.erase],
+                                                chip_erase=self._args.erase,
                                                 trust_crc=self._args.trust_crc)
             programmer.program(self._args.file,
                                 base_address=self._args.base_address,
@@ -459,7 +476,7 @@ class PyOCDTool(object):
     
     def do_erase(self):
         """! @brief Handle 'erase' subcommand."""
-        self._increase_logging(["pyocd.tools.loader", "pyocd"])
+        self._increase_logging(["pyocd.flash.loader"])
         
         session = ConnectHelper.session_with_chosen_probe(
                             project_dir=self._args.project_dir,
@@ -471,7 +488,7 @@ class PyOCDTool(object):
                             target_override=self._args.target_override,
                             frequency=self._args.frequency,
                             blocking=False,
-                            **convert_session_options(self._args.options))
+                            options=convert_session_options(self._args.options))
         if session is None:
             sys.exit(1)
         with session:
@@ -525,7 +542,7 @@ class PyOCDTool(object):
                 'telnet_port' : self._args.telnet_port,
                 'persist' : self._args.persist,
                 'step_into_interrupt' : self._args.step_into_interrupt,
-                'chip_erase': ERASE_OPTIONS[self._args.erase],
+                'chip_erase': self._args.erase,
                 'fast_program' : self._args.trust_crc,
                 'enable_semihosting' : self._args.enable_semihosting,
                 'serve_local_only' : self._args.serve_local_only,
@@ -542,7 +559,7 @@ class PyOCDTool(object):
                 unique_id=self._args.unique_id,
                 target_override=self._args.target_override,
                 frequency=self._args.frequency,
-                **sessionOptions)
+                options=sessionOptions)
             if session is None:
                 LOG.error("No probe selected.")
                 return
@@ -590,12 +607,10 @@ class PyOCDTool(object):
             cache.cache_descriptors()
         
         if self._args.show:
-            devices = pack_target.get_supported_targets()
-            pt = self._get_pretty_table(["Part", "Vendor", "Pack", "Version"])
-            for info in devices:
-                ref, = cache.packs_for_devices([info])
+            packs = pack_target.ManagedPacks.get_installed_packs()
+            pt = self._get_pretty_table(["Vendor", "Pack", "Version"])
+            for ref in packs:
                 pt.add_row([
-                            info['name'],
                             ref.vendor,
                             ref.pack,
                             ref.version,

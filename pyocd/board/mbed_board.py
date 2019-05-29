@@ -28,15 +28,16 @@ class MbedBoard(Board):
     the debug probe's serial number. If the board ID is all "0" characters, it indicates the
     firmware is generic and doesn't have an associated board.
     """
-    def __init__(self, session, target=None):
+    def __init__(self, session, target=None, board_id=None):
         """! @brief Constructor.
         
         This constructor attempts to use the board ID from the serial number to determine
         the target type. See #BOARD_ID_TO_INFO.
         """
-        target = session.options.get('target_override', target)
+        target = session.options.get('target_override')
         unique_id = session.probe.unique_id
-        board_id = unique_id[0:4]
+        if board_id is None:
+            board_id = unique_id[0:4]
         
         # Check for null board ID. This indicates a standalone probe or generic firmware.
         if board_id == "0000":
@@ -61,7 +62,7 @@ class MbedBoard(Board):
             # If there still isn't a known target, tell the user about it. Leaving target
             # set to None will cause cortex_m to be selected by the Board ctor.
             if target is None:
-                LOG.warning("Board ID %s is not recognized; you will be able to use pyOCD but not program flash.", board_id)
+                LOG.warning("Board ID %s is not recognized, using generic cortex_m target.", board_id)
 
         super(MbedBoard, self).__init__(session, target)
 

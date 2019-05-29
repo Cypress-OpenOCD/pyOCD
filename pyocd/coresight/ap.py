@@ -21,8 +21,10 @@ import logging
 import threading
 from contextlib import contextmanager
 
-# Set to True to enable logging of all DP and AP accesses.
-LOG_DAP = False
+LOG = logging.getLogger(__name__)
+
+TRACE = LOG.getChild("trace")
+TRACE.setLevel(logging.CRITICAL)
 
 # Common AP register addresses
 AP_BASE = 0xF8
@@ -144,33 +146,35 @@ def _locked(func):
     return _locking
 
 class AccessPort(object):
-    ## @brief Determine if an AP exists with the given AP number.
-    # @param dp DebugPort instance.
-    # @param ap_num The AP number (APSEL) to probe.
-    # @return Boolean indicating if a valid AP exists with APSEL=ap_num.
+    """! @brief Determine if an AP exists with the given AP number.
+    @param dp DebugPort instance.
+    @param ap_num The AP number (APSEL) to probe.
+    @return Boolean indicating if a valid AP exists with APSEL=ap_num.
+    """
     @staticmethod
     def probe(dp, ap_num):
         idr = dp.read_ap((ap_num << APSEL_SHIFT) | AP_IDR)
         return idr != 0
     
-    ## @brief Create a new AP object.
-    #
-    # Determines the type of the AP by examining the IDR value and creates a new
-    # AP object of the appropriate class. See #AP_TYPE_MAP for the mapping of IDR
-    # fields to class.
-    # 
-    # @param dp DebugPort instance.
-    # @param ap_num The AP number (APSEL) to probe.
-    # @return An AccessPort subclass instance.
-    #
-    # @exception RuntimeError Raised if there is not a valid AP for the ap_num.
     @staticmethod
     def create(dp, ap_num):
+        """! @brief Create a new AP object.
+        
+        Determines the type of the AP by examining the IDR value and creates a new
+        AP object of the appropriate class. See #AP_TYPE_MAP for the mapping of IDR
+        fields to class.
+        
+        @param dp DebugPort instance.
+        @param ap_num The AP number (APSEL) to probe.
+        @return An AccessPort subclass instance.
+        
+        @exception TargetError Raised if there is not a valid AP for the ap_num.
+        """
         # Attempt to read the IDR for this APSEL. If we get a zero back then there is
         # no AP present, so we return None.
         idr = dp.read_ap((ap_num << APSEL_SHIFT) | AP_IDR)
         if idr == 0:
-            raise RuntimeError("Invalid APSEL=%d", ap_num)
+            raise exceptions.TargetError("Invalid APSEL=%d", ap_num)
         
         # Extract IDR fields used for lookup.
         designer = (idr & AP_IDR_JEP106_MASK) >> AP_IDR_JEP106_SHIFT
@@ -197,8 +201,6 @@ class AccessPort(object):
         self.rom_table = None
         self.core = None
         self._lock = threading.RLock()
-        if LOG_DAP:
-            self.logger = self.dp.logger.getChild('ap%d' % ap_num)
 
     @_locked
     def init(self):
@@ -223,7 +225,7 @@ class AccessPort(object):
         self.has_rom_table = (self.rom_addr != 0xffffffff) and ((self.rom_addr & AP_ROM_TABLE_ENTRY_PRESENT_MASK) != 0)
         self.rom_addr &= 0xfffffffc # clear format and present bits
 
-        logging.info("AP#%d IDR = 0x%08x (%s)", self.ap_num, self.idr, desc)
+        LOG.info("AP#%d IDR = 0x%08x (%s)", self.ap_num, self.idr, desc)
  
     @_locked
     def init_rom_table(self):
@@ -232,7 +234,7 @@ class AccessPort(object):
                 self.rom_table = ROMTable(self)
                 self.rom_table.init()
         except exceptions.TransferError as error:
-            logging.error("Transfer error while reading AP#%d ROM table: %s", self.ap_num, error)
+            LOG.error("Transfer error while reading AP#%d ROM table: %s", self.ap_num, error)
 
     @_locked
     def read_reg(self, addr, now=True):
@@ -314,7 +316,7 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         # memory interface based on AP register accesses.
         memoryInterface = self.dp.link.get_memory_interface_for_ap(self.ap_num)
         if memoryInterface is not None:
-            logging.debug("Using accelerated memory access interface")
+            LOG.debug("Using accelerated memory access interface")
             self.write_memory = memoryInterface.write_memory
             self.read_memory = memoryInterface.read_memory
             self.write_memory_block32 = memoryInterface.write_memory_block32
@@ -335,7 +337,7 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         
         default_hprot = (csw & CSW_HPROT_MASK) >> CSW_HPROT_SHIFT
         default_hnonsec = (csw & CSW_HNONSEC_MASK) >> CSW_HNONSEC_SHIFT
-        logging.debug("AP#%d default HPROT=%x HNONSEC=%x", self.ap_num, default_hprot, default_hnonsec)
+        LOG.debug("AP#%d default HPROT=%x HNONSEC=%x", self.ap_num, default_hprot, default_hnonsec)
         
         # Now attempt to see which HPROT and HNONSEC bits are implemented.
         AccessPort.write_reg(self, MEM_AP_CSW, csw | CSW_HNONSEC_MASK | CSW_HPROT_MASK)
@@ -343,7 +345,7 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         
         self._impl_hprot = (csw & CSW_HPROT_MASK) >> CSW_HPROT_SHIFT
         self._impl_hnonsec = (csw & CSW_HNONSEC_MASK) >> CSW_HNONSEC_SHIFT
-        logging.debug("AP#%d implemented HPROT=%x HNONSEC=%x", self.ap_num, self._impl_hprot, self._impl_hnonsec)
+        LOG.debug("AP#%d implemented HPROT=%x HNONSEC=%x", self.ap_num, self._impl_hprot, self._impl_hnonsec)
         
         # Update current HPROT and HNONSEC, and the current base CSW value.
         self.hprot = self._hprot & self._impl_hprot
@@ -468,9 +470,9 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         # Don't need to write CSW if it's not changing value.
         if ap_regaddr == MEM_AP_CSW:
             if data == self._cached_csw:
-                if LOG_DAP:
+                if TRACE.isEnabledFor(logging.INFO):
                     num = self.dp.next_access_number
-                    self.logger.info("write_ap:%06d cached (addr=0x%08x) = 0x%08x", num, addr, data)
+                    TRACE.debug("write_ap:%06d cached (addr=0x%08x) = 0x%08x", num, addr, data)
                 return
             self._cached_csw = data
 
@@ -487,15 +489,15 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         # TODO use notifications to invalidate CSW cache.
         self._cached_csw = -1
 
-    ## @brief Write a single memory location.
-    #
-    # By default the transfer size is a word
     @_locked
     def _write_memory(self, addr, data, transfer_size=32):
+        """! @brief Write a single memory location.
+        
+        By default the transfer size is a word
+        """
         assert (addr & (transfer_size // 8 - 1)) == 0
         num = self.dp.next_access_number
-        if LOG_DAP:
-            self.logger.info("write_mem:%06d (addr=0x%08x, size=%d) = 0x%08x {", num, addr, transfer_size, data)
+        TRACE.debug("write_mem:%06d (addr=0x%08x, size=%d) = 0x%08x {", num, addr, transfer_size, data)
         self.write_reg(MEM_AP_CSW, self._csw | TRANSFER_SIZE[transfer_size])
         if transfer_size == 8:
             data = data << ((addr & 0x03) << 3)
@@ -514,17 +516,16 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         except exceptions.Error as error:
             self._handle_error(error, num)
             raise
-        if LOG_DAP:
-            self.logger.info("write_mem:%06d }", num)
+        TRACE.debug("write_mem:%06d }", num)
 
-    ## @brief Read a memory location.
-    #
-    # By default, a word will be read.
     def _read_memory(self, addr, transfer_size=32, now=True):
+        """! @brief Read a memory location.
+        
+        By default, a word will be read.
+        """
         assert (addr & (transfer_size // 8 - 1)) == 0
         num = self.dp.next_access_number
-        if LOG_DAP:
-            self.logger.info("read_mem:%06d (addr=0x%08x, size=%d) {", num, addr, transfer_size)
+        TRACE.debug("read_mem:%06d (addr=0x%08x, size=%d) {", num, addr, transfer_size)
         res = None
         try:
             self.write_reg(MEM_AP_CSW, self._csw | TRANSFER_SIZE[transfer_size])
@@ -547,8 +548,7 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
                     res = (res >> ((addr & 0x03) << 3) & 0xff)
                 elif transfer_size == 16:
                     res = (res >> ((addr & 0x02) << 3) & 0xffff)
-                if LOG_DAP:
-                    self.logger.info("read_mem:%06d %s(addr=0x%08x, size=%d) -> 0x%08x }", num, "" if now else "...", addr, transfer_size, res)
+                TRACE.debug("read_mem:%06d %s(addr=0x%08x, size=%d) -> 0x%08x }", num, "" if now else "...", addr, transfer_size, res)
             except exceptions.TransferFaultError as error:
                 # Annotate error with target address.
                 self._handle_error(error, num)
@@ -566,15 +566,15 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         else:
             return read_mem_cb
 
-    ## @brief Write a single transaction's worth of aligned words.
-    #
-    # The transaction must not cross the MEM-AP's auto-increment boundary.
     @_locked
     def _write_block32(self, addr, data):
+        """! @brief Write a single transaction's worth of aligned words.
+        
+        The transaction must not cross the MEM-AP's auto-increment boundary.
+        """
         assert (addr & 0x3) == 0
         num = self.dp.next_access_number
-        if LOG_DAP:
-            self.logger.info("_write_block32:%06d (addr=0x%08x, size=%d) {", num, addr, len(data))
+        TRACE.debug("_write_block32:%06d (addr=0x%08x, size=%d) {", num, addr, len(data))
         # put address in TAR
         self.write_reg(MEM_AP_CSW, self._csw | CSW_SIZE32)
         self.write_reg(MEM_AP_TAR, addr)
@@ -589,18 +589,17 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         except exceptions.Error as error:
             self._handle_error(error, num)
             raise
-        if LOG_DAP:
-            self.logger.info("_write_block32:%06d }", num)
+        TRACE.debug("_write_block32:%06d }", num)
 
-    ## @brief Read a single transaction's worth of aligned words.
-    #
-    # The transaction must not cross the MEM-AP's auto-increment boundary.
     @_locked
     def _read_block32(self, addr, size):
+        """! @brief Read a single transaction's worth of aligned words.
+        
+        The transaction must not cross the MEM-AP's auto-increment boundary.
+        """
         assert (addr & 0x3) == 0
         num = self.dp.next_access_number
-        if LOG_DAP:
-            self.logger.info("_read_block32:%06d (addr=0x%08x, size=%d) {", num, addr, size)
+        TRACE.debug("_read_block32:%06d (addr=0x%08x, size=%d) {", num, addr, size)
         # put address in TAR
         self.write_reg(MEM_AP_CSW, self._csw | CSW_SIZE32)
         self.write_reg(MEM_AP_TAR, addr)
@@ -615,13 +614,12 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
         except exceptions.Error as error:
             self._handle_error(error, num)
             raise
-        if LOG_DAP:
-            self.logger.info("_read_block32:%06d }", num)
+        TRACE.debug("_read_block32:%06d }", num)
         return resp
 
-    ## @brief Write a block of aligned words in memory.
     @_locked
     def _write_memory_block32(self, addr, data):
+        """! @brief Write a block of aligned words in memory."""
         assert (addr & 0x3) == 0
         size = len(data)
         while size > 0:
@@ -634,11 +632,12 @@ class MEM_AP(AccessPort, memory_interface.MemoryInterface):
             addr += n
         return
 
-    ## @brief Read a block of aligned words in memory.
-    #
-    # @return An array of word values
     @_locked
     def _read_memory_block32(self, addr, size):
+        """! @brief Read a block of aligned words in memory.
+        
+        @return An array of word values
+        """
         assert (addr & 0x3) == 0
         resp = []
         while size > 0:

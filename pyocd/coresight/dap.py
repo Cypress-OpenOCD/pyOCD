@@ -1,5 +1,5 @@
 # pyOCD debugger
-# Copyright (c) 2015-2018 Arm Limited
+# Copyright (c) 2015-2019 Arm Limited
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,13 +16,18 @@
 
 from ..core import exceptions
 from ..probe.debug_probe import DebugProbe
-from .ap import (MEM_AP_CSW, LOG_DAP, APSEL, APBANKSEL, APREG_MASK, AccessPort)
+from .ap import (MEM_AP_CSW, APSEL, APBANKSEL, APREG_MASK, AccessPort)
 from ..utility.sequencer import CallSequence
 import logging
 import logging.handlers
 import os
 import os.path
 import six
+
+LOG = logging.getLogger(__name__)
+
+TRACE = LOG.getChild("trace")
+TRACE.setLevel(logging.CRITICAL)
 
 # DP register addresses.
 DP_IDCODE = 0x0 # read-only
@@ -60,48 +65,28 @@ TRNNORMAL = 0x00000000
 MASKLANE = 0x00000f00
 
 class DebugPort(object):
-    # DAP log file name.
-    DAP_LOG_FILE = "pyocd_dap.log"
-
+    """! @brief Represents the DebugPort (DP)."
+    """
+    
     def __init__(self, link, target):
         self.link = link
         self.target = target
         self.valid_aps = None
         self.aps = {}
         self._access_number = 0
-        if LOG_DAP:
-            self._setup_logging()
 
     @property
     def next_access_number(self):
         self._access_number += 1
         return self._access_number
 
-    ## @brief Set up DAP logging.
-    #
-    # A memory handler is created that buffers log records before flushing them to a file
-    # handler that writes to DAP_LOG_FILE. This improves logging performance by writing to the
-    # log file less often.
-    def _setup_logging(self):
-        cwd = os.getcwd()
-        logfile = os.path.join(cwd, self.DAP_LOG_FILE)
-        logging.info("dap logfile: %s", logfile)
-        self.logger = logging.getLogger('dap')
-        self.logger.propagate = False
-        formatter = logging.Formatter('%(relativeCreated)010dms:%(levelname)s:%(name)s:%(message)s')
-        fileHandler = logging.FileHandler(logfile, mode='w+', delay=True)
-        fileHandler.setFormatter(formatter)
-        memHandler = logging.handlers.MemoryHandler(capacity=128, target=fileHandler)
-        self.logger.addHandler(memHandler)
-        self.logger.setLevel(logging.DEBUG)
-
     def init(self):
-        # Connect to the target.
+        """! @brief Connect to the target."""
         self.link.connect()
         self.link.swj_sequence()
         try:
             self.read_id_code()
-            logging.info("DP IDR = 0x%08x (v%d%s rev%d)", self.dpidr, self.dp_version,
+            LOG.info("DP IDR = 0x%08x (v%d%s rev%d)", self.dpidr, self.dp_version,
                 " MINDP" if self.is_mindp else "", self.dp_revision)
         except exceptions.TransferError:
             # If the read of the DP IDCODE fails, retry SWJ sequence. The DP may have been
@@ -111,7 +96,7 @@ class DebugPort(object):
         self.clear_sticky_err()
 
     def read_id_code(self):
-        # Read ID register and get DP version
+        """! @brief Read ID register and get DP version"""
         self.dpidr = self.read_reg(DP_IDCODE)
         self.dp_version = (self.dpidr & DPIDR_VERSION_MASK) >> DPIDR_VERSION_SHIFT
         self.dp_revision = (self.dpidr & DPIDR_REVISION_MASK) >> DPIDR_REVISION_SHIFT
@@ -166,15 +151,16 @@ class DebugPort(object):
     def set_clock(self, frequency):
         self.link.set_clock(frequency)
         
-    ## @brief Find valid APs.
-    #
-    # Scans for valid APs starting at APSEL=0 and stopping the first time a 0 is returned
-    # when reading the AP's IDR.
-    #
-    # Note that a few MCUs will lock up when accessing invalid APs. Those MCUs will have to
-    # modify the init call sequence to substitute a fixed list of valid APs. In fact, that
-    # is a major reason this method is separated from create_aps().
     def find_aps(self):
+        """! @brief Find valid APs.
+        
+        Scans for valid APs starting at APSEL=0 and stopping the first time a 0 is returned
+        when reading the AP's IDR.
+        
+        Note that a few MCUs will lock up when accessing invalid APs. Those MCUs will have to
+        modify the init call sequence to substitute a fixed list of valid APs. In fact, that
+        is a major reason this method is separated from create_aps().
+        """
         if self.valid_aps is not None:
             return
         apList = []
@@ -185,19 +171,20 @@ class DebugPort(object):
                 if not isValid:
                     break
                 apList.append(ap_num)
-            except Exception as e:
-                logging.error("Exception while probing AP#%d: %s", ap_num, repr(e))
+            except exceptions.Error as e:
+                LOG.error("Exception while probing AP#%d: %s", ap_num, e)
                 break
             ap_num += 1
         
         # Update the AP list once we know it's complete.
         self.valid_aps = apList
 
-    ## @brief Init task that returns a call sequence to create APs.
-    #
-    # For each AP in the #valid_aps list, an AccessPort object is created. The new objects
-    # are added to the #aps dict, keyed by their AP number.
     def create_aps(self):
+        """! @brief Init task that returns a call sequence to create APs.
+        
+        For each AP in the #valid_aps list, an AccessPort object is created. The new objects
+        are added to the #aps dict, keyed by their AP number.
+        """
         seq = CallSequence()
         for ap_num in self.valid_aps:
             seq.append(
@@ -205,16 +192,16 @@ class DebugPort(object):
                 )
         return seq
     
-    ## @brief Init task to create a single AP object.
     def create_1_ap(self, ap_num):
+        """! @brief Init task to create a single AP object."""
         try:
             ap = AccessPort.create(self, ap_num)
             self.aps[ap_num] = ap
-        except Exception as e:
-            logging.error("Exception reading AP#%d IDR: %s", ap_num, repr(e))
+        except exceptions.Error as e:
+            LOG.error("Exception reading AP#%d IDR: %s", ap_num, e)
     
-    ## @brief Init task that generates a call sequence to init all AP ROMs.
     def init_ap_roms(self):
+        """! @brief Init task that generates a call sequence to init all AP ROMs."""
         seq = CallSequence()
         for ap in [x for x in self.aps.values() if x.has_rom_table]:
             seq.append(
@@ -235,8 +222,7 @@ class DebugPort(object):
         def read_dp_cb():
             try:
                 result = result_cb()
-                if LOG_DAP:
-                    self.logger.info("read_dp:%06d %s(addr=0x%08x) -> 0x%08x", num, "" if now else "...", addr, result)
+                TRACE.debug("read_dp:%06d %s(addr=0x%08x) -> 0x%08x", num, "" if now else "...", addr, result)
                 return result
             except exceptions.ProbeError as error:
                 self._handle_error(error, num)
@@ -245,8 +231,7 @@ class DebugPort(object):
         if now:
             return read_dp_cb()
         else:
-            if LOG_DAP:
-                self.logger.info("read_dp:%06d (addr=0x%08x) -> ...", num, addr)
+            TRACE.debug("read_dp:%06d (addr=0x%08x) -> ...", num, addr)
             return read_dp_cb
 
     def write_dp(self, addr, data):
@@ -254,8 +239,7 @@ class DebugPort(object):
 
         # Write the DP register.
         try:
-            if LOG_DAP:
-                self.logger.info("write_dp:%06d (addr=0x%08x) = 0x%08x", num, addr, data)
+            TRACE.debug("write_dp:%06d (addr=0x%08x) = 0x%08x", num, addr, data)
             self.link.write_dp(addr, data)
         except exceptions.ProbeError as error:
             self._handle_error(error, num)
@@ -268,8 +252,7 @@ class DebugPort(object):
         num = self.next_access_number
 
         try:
-            if LOG_DAP:
-                self.logger.info("write_ap:%06d (addr=0x%08x) = 0x%08x", num, addr, data)
+            TRACE.debug("write_ap:%06d (addr=0x%08x) = 0x%08x", num, addr, data)
             self.link.write_ap(addr, data)
         except exceptions.ProbeError as error:
             self._handle_error(error, num)
@@ -291,8 +274,7 @@ class DebugPort(object):
         def read_ap_cb():
             try:
                 result = result_cb()
-                if LOG_DAP:
-                    self.logger.info("read_ap:%06d %s(addr=0x%08x) -> 0x%08x", num, "" if now else "...", addr, result)
+                TRACE.debug("read_ap:%06d %s(addr=0x%08x) -> 0x%08x", num, "" if now else "...", addr, result)
                 return result
             except exceptions.ProbeError as error:
                 self._handle_error(error, num)
@@ -301,13 +283,11 @@ class DebugPort(object):
         if now:
             return read_ap_cb()
         else:
-            if LOG_DAP:
-                self.logger.info("read_ap:%06d (addr=0x%08x) -> ...", num, addr)
+            TRACE.debug("read_ap:%06d (addr=0x%08x) -> ...", num, addr)
             return read_ap_cb
 
     def _handle_error(self, error, num):
-        if LOG_DAP:
-            self.logger.info("error:%06d %s", num, error)
+        TRACE.debug("error:%06d %s", num, error)
         # Clear sticky error for fault errors.
         if isinstance(error, exceptions.TransferFaultError):
             self.clear_sticky_err()

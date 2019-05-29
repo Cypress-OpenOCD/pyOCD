@@ -28,6 +28,7 @@ from .cmsis_dap_core import (Command, Pin, Capabilities, DAP_TRANSFER_OK,
                              DAP_TRANSFER_FAULT, DAP_TRANSFER_WAIT,
                              DAPSWOTransport, DAPSWOMode, DAPSWOControl,
                              DAPSWOStatus)
+from ...core import session
 
 # CMSIS-DAP values
 AP_ACC = 1 << 0
@@ -44,11 +45,13 @@ class SWOStatus:
     RUNNING = 3
     ERROR = 4
 
-# Set to True to enable logging of packet filling logic.
-LOG_PACKET_BUILDS = False
+LOG = logging.getLogger(__name__)
+
+TRACE = LOG.getChild("trace")
+TRACE.setLevel(logging.CRITICAL)
 
 def _get_interfaces():
-    """Get the connected USB devices"""
+    """! @brief Get the connected USB devices"""
     # Get CMSIS-DAPv1 interfaces.
     v1_interfaces = INTERFACE[USB_BACKEND].get_all_connected_interfaces()
     
@@ -66,13 +69,12 @@ def _get_interfaces():
 
 
 def _get_unique_id(interface):
-    """Get the unique id from an interface"""
+    """! @brief Get the unique id from an interface"""
     return interface.get_serial_number()
 
 
 class _Transfer(object):
-    """
-    A wrapper object representing a command invoked by the layer above.
+    """! @brief A wrapper object representing a command invoked by the layer above.
 
     The transfer class contains a logical register read or a block
     of reads to the same register.
@@ -98,14 +100,12 @@ class _Transfer(object):
         self._error = None
 
     def get_data_size(self):
-        """
-        Get the size in bytes of the return value of this transfer
+        """! @brief Get the size in bytes of the return value of this transfer
         """
         return self._size_bytes
 
     def add_response(self, data):
-        """
-        Add data read from the remote device to this object.
+        """! @brief Add data read from the remote device to this object.
 
         The size of data added must match exactly the size
         that get_data_size returns.
@@ -119,15 +119,13 @@ class _Transfer(object):
         self._result = result
 
     def add_error(self, error):
-        """
-        Attach an exception to this transfer rather than data.
+        """! @brief Attach an exception to this transfer rather than data.
         """
         assert isinstance(error, Exception)
         self._error = error
 
     def get_result(self):
-        """
-        Get the result of this transfer.
+        """! @brief Get the result of this transfer.
         """
         while self._result is None:
             if len(self.daplink._commands_to_read) > 0:
@@ -147,8 +145,7 @@ class _Transfer(object):
         return self._result
 
 class _Command(object):
-    """
-    A wrapper object representing a command send to the layer below (ex. USB).
+    """! @brief Wrapper object representing a command send to the layer below (ex. USB).
 
     This class wraps the phyiscal commands DAP_Transfer and DAP_TransferBlock
     to provide a uniform way to build the command to most efficiently transfer
@@ -168,13 +165,10 @@ class _Command(object):
         self._data = []
         self._dap_index = None
         self._data_encoded = False
-        if LOG_PACKET_BUILDS:
-            self._logger = logging.getLogger(__name__)
-            self._logger.debug("New _Command")
+        TRACE.debug("New _Command")
 
     def _get_free_words(self, blockAllowed, isRead):
-        """
-        Return the number of words free in the transmit packet
+        """! @brief Return the number of words free in the transmit packet
         """
         if blockAllowed:
             # DAP_TransferBlock request packet:
@@ -235,11 +229,10 @@ class _Command(object):
             max_count = self._write_count + self._read_count + size
             delta = max_count - 255
             size = min(size - delta, size)
-            if LOG_PACKET_BUILDS:
-                self._logger.debug("get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d, delta=%d)" %
+            TRACE.debug("get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d, delta=%d)" %
                     (count, request, 'r' if is_read else 'w', self._write_count, self._read_count, self._block_allowed, blockAllowed, size, free, delta))
-        elif LOG_PACKET_BUILDS:
-            self._logger.debug("get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d)" %
+        else:
+            TRACE.debug("get_request_space(%d, %02x:%s)[wc=%d, rc=%d, ba=%d->%d] -> (sz=%d, free=%d)" %
                 (count, request, 'r' if is_read else 'w', self._write_count, self._read_count, self._block_allowed, blockAllowed, size, free))
 
         # We can get a negative free count if the packet already contains more data than can be
@@ -252,14 +245,12 @@ class _Command(object):
             (self._get_free_words(self._block_allowed, False) == 0)
 
     def get_empty(self):
-        """
-        Return True if no transfers have been added to this packet
+        """! @brief Return True if no transfers have been added to this packet
         """
         return len(self._data) == 0
 
     def add(self, count, request, data, dap_index):
-        """
-        Add a single or block register transfer operation to this command
+        """! @brief Add a single or block register transfer operation to this command
         """
         assert self._data_encoded is False
         if self._dap_index is None:
@@ -278,13 +269,11 @@ class _Command(object):
             self._write_count += count
         self._data.append((count, request, data))
 
-        if LOG_PACKET_BUILDS:
-            self._logger.debug("add(%d, %02x:%s) -> [wc=%d, rc=%d, ba=%d]" %
+        TRACE.debug("add(%d, %02x:%s) -> [wc=%d, rc=%d, ba=%d]" %
                 (count, request, 'r' if (request & READ) else 'w', self._write_count, self._read_count, self._block_allowed))
 
     def _encode_transfer_data(self):
-        """
-        Encode this command into a byte array that can be sent
+        """! @brief Encode this command into a byte array that can be sent
 
         The data returned by this function is a bytearray in
         the format that of a DAP_Transfer CMSIS-DAP command.
@@ -318,8 +307,7 @@ class _Command(object):
         return buf
 
     def _decode_transfer_data(self, data):
-        """
-        Take a byte array and extract the data from it
+        """! @brief Take a byte array and extract the data from it
 
         Decode the response returned by a DAP_Transfer CMSIS-DAP command
         and return it as an array of bytes.
@@ -344,8 +332,7 @@ class _Command(object):
         return data[3:3 + 4 * self._read_count]
 
     def _encode_transfer_block_data(self):
-        """
-        Encode this command into a byte array that can be sent
+        """! @brief Encode this command into a byte array that can be sent
 
         The data returned by this function is a bytearray in
         the format that of a DAP_TransferBlock CMSIS-DAP command.
@@ -384,8 +371,7 @@ class _Command(object):
         return buf
 
     def _decode_transfer_block_data(self, data):
-        """
-        Take a byte array and extract the data from it
+        """! @brief Take a byte array and extract the data from it
 
         Decode the response returned by a DAP_TransferBlock CMSIS-DAP command
         and return it as an array of bytes.
@@ -411,8 +397,7 @@ class _Command(object):
         return data[4:4 + 4 * self._read_count]
 
     def encode_data(self):
-        """
-        Encode this command into a byte array that can be sent
+        """! @brief Encode this command into a byte array that can be sent
 
         The actual command this is encoded into depends on the data
         that was added.
@@ -426,8 +411,7 @@ class _Command(object):
         return data
 
     def decode_data(self, data):
-        """
-        Decode the response data
+        """! @brief Decode the response data
         """
         assert self.get_empty() is False
         assert self._data_encoded is True
@@ -438,19 +422,15 @@ class _Command(object):
         return data
 
 class DAPAccessCMSISDAP(DAPAccessIntf):
+    """! @brief An implementation of the DAPAccessIntf layer for DAPLINK boards
     """
-    An implementation of the DAPAccessIntf layer for DAPLINK boards
-    """
-
-
 
     # ------------------------------------------- #
     #          Static Functions
     # ------------------------------------------- #
     @staticmethod
     def get_connected_devices():
-        """
-        Return an array of all mbed boards connected
+        """! @brief Return an array of all mbed boards connected
         """
         all_daplinks = []
         all_interfaces = _get_interfaces()
@@ -459,14 +439,17 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
                 new_daplink = DAPAccessCMSISDAP(None, interface=interface)
                 all_daplinks.append(new_daplink)
             except DAPAccessIntf.TransferError:
-                logger = logging.getLogger(__name__)
-                logger.error('Failed to get unique id', exc_info=True)
+                LOG.error('Failed to get unique id', exc_info=session.Session.get_current().log_tracebacks)
         return all_daplinks
 
     @staticmethod
     def get_device(device_id):
         assert isinstance(device_id, six.string_types)
-        return DAPAccessCMSISDAP(device_id)
+        iface = DAPAccessCMSISDAP._lookup_interface_for_unique_id(device_id)
+        if iface is not None:
+            return DAPAccessCMSISDAP(device_id, iface)
+        else:
+            return None
 
     @staticmethod
     def set_args(arg_list):
@@ -501,8 +484,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
                     assert result_interface is None, "More than one probes with ID {}".format(unique_id)
                     result_interface = interface
             except Exception:
-                logger = logging.getLogger(__name__)
-                logger.error('Failed to get unique id for open', exc_info=True)
+                LOG.error('Failed to get unique id for open', exc_info=session.Session.get_current().log_tracebacks)
         return result_interface
 
     # ------------------------------------------- #
@@ -515,6 +497,8 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         # Search for a matching interface if one wasn't provided.
         if interface is None:
             interface = DAPAccessCMSISDAP._lookup_interface_for_unique_id(unique_id)
+            if interface is None:
+                raise self.DeviceError("no device with ID %s" % unique_id)
 
         if interface is not None:
             self._unique_id = _get_unique_id(interface)
@@ -540,7 +524,6 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         self._commands_to_read = None
         self._command_response_buf = None
         self._swo_status = None
-        self._logger = logging.getLogger(__name__)
 
     @property
     def vendor_name(self):
@@ -564,9 +547,14 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
 
         if DAPSettings.limit_packets:
             self._packet_count = 1
-            self._logger.debug("Limiting packet count to %d", self._packet_count)
+            LOG.debug("Limiting packet count to %d", self._packet_count)
         else:
             self._packet_count = self._protocol.dap_info(self.ID.MAX_PACKET_COUNT)
+
+        # Log probe's firmware version.
+        fw_version = self._protocol.dap_info(self.ID.FW_VER)
+        if fw_version:
+            LOG.debug("CMSIS-DAP probe %s firmware version: %s", self._unique_id, fw_version)
 
         self._interface.set_packet_count(self._packet_count)
         self._packet_size = self._protocol.dap_info(self.ID.MAX_PACKET_SIZE)
@@ -617,8 +605,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         return self._dap_port
 
     def set_deferred_transfer(self, enable):
-        """
-        Allow transfers to be delayed and buffered
+        """! @brief Allow transfers to be delayed and buffered
 
         By default deferred transfers are turned off.  All reads and
         writes will be completed by the time the function returns.
@@ -718,7 +705,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
                 self._swo_disable()
                 return True
         except DAPAccessIntf.CommandError as e:
-            self._logger.debug("Exception while configuring SWO: %s", e)
+            LOG.debug("Exception while configuring SWO: %s", e)
             self._swo_disable()
             return False
     
@@ -727,7 +714,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             self._protocol.swo_mode(DAPSWOMode.OFF)
             self._protocol.swo_transport(DAPSWOTransport.NONE)
         except DAPAccessIntf.CommandError as e:
-            self._logger.debug("Exception while disabling SWO: %s", e)
+            LOG.debug("Exception while disabling SWO: %s", e)
         finally:
             self._swo_status = SWOStatus.DISABLED
     
@@ -842,8 +829,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
     # ------------------------------------------- #
 
     def _init_deferred_buffers(self):
-        """
-        Initialize or reinitalize all the deferred transfer buffers
+        """! @brief Initialize or reinitalize all the deferred transfer buffers
 
         Calling this method will drop all pending transactions
         so use with care.
@@ -862,8 +848,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         self._command_response_buf = bytearray()
 
     def _read_packet(self):
-        """
-        Reads and decodes a single packet
+        """! @brief Reads and decodes a single packet
 
         Reads a single packet from the device and
         stores the data from it in the current Command
@@ -905,8 +890,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
             self._command_response_buf = self._command_response_buf[pos:]
 
     def _send_packet(self):
-        """
-        Send a single packet to the interface
+        """! @brief Send a single packet to the interface
 
         This function guarentees that the number of packets
         that are stored in daplink's buffer (the number of
@@ -931,8 +915,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
 
     def _write(self, dap_index, transfer_count,
                transfer_request, transfer_data):
-        """
-        Write one or more commands
+        """! @brief Write one or more commands
         """
         assert dap_index == 0  # dap index currently unsupported
         assert isinstance(transfer_count, six.integer_types)
@@ -957,8 +940,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
 
             # This request doesn't fit in the packet so send it.
             if size == 0:
-                if LOG_PACKET_BUILDS:
-                    self._logger.debug("_write: send packet [size==0]")
+                TRACE.debug("_write: send packet [size==0]")
                 self._send_packet()
                 cmd = self._crnt_cmd
                 continue
@@ -974,8 +956,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
 
             # Packet has been filled so send it
             if cmd.get_full():
-                if LOG_PACKET_BUILDS:
-                    self._logger.debug("_write: send packet [full]")
+                TRACE.debug("_write: send packet [full]")
                 self._send_packet()
                 cmd = self._crnt_cmd
 
@@ -985,8 +966,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         return transfer
 
     def _jtag_to_swd(self):
-        """
-        Send the command to switch from SWD to jtag
+        """! @brief Send the command to switch from SWD to jtag
         """
         data = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]
         self._protocol.swj_sequence(data)
@@ -1001,8 +981,7 @@ class DAPAccessCMSISDAP(DAPAccessIntf):
         self._protocol.swj_sequence(data)
 
     def _abort_all_transfers(self, exception):
-        """
-        Abort any ongoing transfers and clear all buffers
+        """! @brief Abort any ongoing transfers and clear all buffers
         """
         pending_reads = len(self._commands_to_read)
         # invalidate _transfer_list

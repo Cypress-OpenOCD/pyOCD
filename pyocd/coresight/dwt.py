@@ -19,6 +19,8 @@ from ..core.target import Target
 from .component import CoreSightComponent
 import logging
 
+LOG = logging.getLogger(__name__)
+
 # Need a local copy to prevent circular import.
 # Debug Exception and Monitor Control Register
 DEMCR = 0xE000EDFC
@@ -92,11 +94,12 @@ class DWT(CoreSightComponent):
         self.watchpoint_used = 0
         self.dwt_configured = False
 
-    ## @brief Inits the DWT.
-    #
-    # Reads the number of hardware watchpoints available on the core  and makes sure that they
-    # are all disabled and ready for future use.
     def init(self):
+        """! @brief Inits the DWT.
+        
+        Reads the number of hardware watchpoints available on the core  and makes sure that they
+        are all disabled and ready for future use.
+        """
         # Make sure trace is enabled.
         demcr = self.ap.read_memory(DEMCR)
         if (demcr & DEMCR_TRCENA) == 0:
@@ -105,7 +108,7 @@ class DWT(CoreSightComponent):
         
         dwt_ctrl = self.ap.read_memory(self.address + DWT.DWT_CTRL)
         watchpoint_count = (dwt_ctrl & DWT.DWT_CTRL_NUM_COMP_MASK) >> DWT.DWT_CTRL_NUM_COMP_SHIFT
-        logging.info("%d hardware watchpoints", watchpoint_count)
+        LOG.info("%d hardware watchpoints", watchpoint_count)
         for i in range(watchpoint_count):
             comparatorAddress = self.address + DWT.DWT_COMP_BASE + DWT.DWT_COMP_BLOCK_SIZE * i
             self.watchpoints.append(Watchpoint(comparatorAddress, self))
@@ -121,8 +124,8 @@ class DWT(CoreSightComponent):
                 return watch
         return None
 
-    ## @brief Set a hardware watchpoint.
     def set_watchpoint(self, addr, size, type):
+        """! @brief Set a hardware watchpoint."""
         if self.dwt_configured is False:
             self.init()
 
@@ -131,7 +134,7 @@ class DWT(CoreSightComponent):
             return True
 
         if type not in DWT.WATCH_TYPE_TO_FUNCT:
-            logging.error("Invalid watchpoint type %i", type)
+            LOG.error("Invalid watchpoint type %i", type)
             return False
 
         for watch in self.watchpoints:
@@ -141,13 +144,13 @@ class DWT(CoreSightComponent):
                 watch.size = size
 
                 if size not in DWT.WATCH_SIZE_TO_MASK:
-                    logging.error('Watchpoint of size %d not supported by device', size)
+                    LOG.error('Watchpoint of size %d not supported by device', size)
                     return False
 
                 mask = DWT.WATCH_SIZE_TO_MASK[size]
                 self.ap.write_memory(watch.comp_register_addr + DWT.DWT_MASK_OFFSET, mask)
                 if self.ap.read_memory(watch.comp_register_addr + DWT.DWT_MASK_OFFSET) != mask:
-                    logging.error('Watchpoint of size %d not supported by device', size)
+                    LOG.error('Watchpoint of size %d not supported by device', size)
                     return False
 
                 self.ap.write_memory(watch.comp_register_addr, addr)
@@ -155,11 +158,11 @@ class DWT(CoreSightComponent):
                 self.watchpoint_used += 1
                 return True
 
-        logging.error('No more available watchpoint!!, dropped watch at 0x%X', addr)
+        LOG.error('No more watchpoints are available, dropped watchpoint at 0x%08x', addr)
         return False
 
-    ## @brief Remove a hardware watchpoint.
     def remove_watchpoint(self, addr, size, type):
+        """! @brief Remove a hardware watchpoint."""
         watch = self.find_watchpoint(addr, size, type)
         if watch is None:
             return

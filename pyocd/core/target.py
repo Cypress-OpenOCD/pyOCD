@@ -15,11 +15,10 @@
 # limitations under the License.
 
 from .memory_interface import MemoryInterface
-from ..utility.notification import Notifier
 from .memory_map import MemoryMap
 from enum import Enum
 
-class Target(MemoryInterface, Notifier):
+class Target(MemoryInterface):
 
     TARGET_RUNNING = 1   # Core is executing code.
     TARGET_HALTED = 2    # Core is halted in debug mode.
@@ -90,16 +89,14 @@ class Target(MemoryInterface, Notifier):
     VENDOR = "Generic"
 
     def __init__(self, session, memoryMap=None):
-        super(Target, self).__init__()
         self._session = session
         self._delegate = None
-        self.root_target = None
         self.vendor = self.VENDOR
         self.part_families = []
         self.part_number = ""
         self.memory_map = memoryMap or MemoryMap()
-        self.halt_on_connect = session.options.get('halt_on_connect', True)
-        self.auto_unlock = session.options.get('auto_unlock', True)
+        self.halt_on_connect = session.options.get('halt_on_connect')
+        self.auto_unlock = session.options.get('auto_unlock')
         self._svd_location = None
         self._svd_device = None
 
@@ -147,7 +144,7 @@ class Target(MemoryInterface, Notifier):
     def halt(self):
         raise NotImplementedError()
 
-    def step(self, disable_interrupts=True):
+    def step(self, disable_interrupts=True, start=0, end=0):
         raise NotImplementedError()
 
     def resume(self):

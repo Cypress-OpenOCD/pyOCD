@@ -26,14 +26,12 @@ import sys
 
 from .flash_builder import (FlashBuilder, get_page_count, get_sector_count)
 from ..core.memory_map import MemoryType
+from ..core import exceptions
 from ..utility.progress import print_progress
 from elftools.elf.elffile import ELFFile
 from ..utility.compatibility import FileNotFoundError_
 
 LOG = logging.getLogger(__name__)
-
-## Sentinel object used to identify an unset chip_erase parameter.
-CHIP_ERASE_SENTINEL = object()
 
 def ranges(i):
     """!
@@ -60,7 +58,7 @@ class FileProgrammer(object):
     - Intel Hex (.hex)
     - ELF (.elf or .axf)
     """
-    def __init__(self, session, progress=None, chip_erase=CHIP_ERASE_SENTINEL, smart_flash=None,
+    def __init__(self, session, progress=None, chip_erase=None, smart_flash=None,
         trust_crc=None, keep_unwritten=None):
         """! @brief Constructor.
         
@@ -70,8 +68,7 @@ class FileProgrammer(object):
             If not set or None, a default progress handler will be used unless the session option
             'hide_programming_progress' is set to True, in which case progress will be disabled.
         @param chip_erase Sets whether to use chip erase or sector erase. The value must be one of
-            None, True, or False. None means the fastest erase method should be used. True means
-            to force chip erase, while False means force sector erase.
+            "auto", "sector", or "chip". "auto" means the fastest erase method should be used.
         @param smart_flash If set to True, the programmer will attempt to not program pages whose
             contents are not going to change by scanning target flash memory. A value of False will
             force all pages to be erased and programmed.
@@ -166,20 +163,23 @@ class FileProgrammer(object):
             if isPath and file_obj is not None:
                 file_obj.close()
 
-    # Binary file format
     def _program_bin(self, file_obj, **kwargs):
+        """! @brief Binary file format loader"""
         # If no base address is specified use the start of the boot memory.
         address = kwargs.get('base_address', None)
         if address is None:
-            address = self._session.target.memory_map.get_boot_memory().start
+            boot_memory = self._session.target.memory_map.get_boot_memory()
+            if boot_memory is None:
+                raise exceptions.TargetSupportError("No boot memory is defined for this device")
+            address = boot_memory.start
         
         file_obj.seek(kwargs.get('skip', 0), os.SEEK_SET)
         data = list(bytearray(file_obj.read()))
         
         self._loader.add_data(address, data)
 
-    # Intel hex file format
     def _program_hex(self, file_obj, **kwargs):
+        """! Intel hex file format loader"""
         hexfile = IntelHex(file_obj)
         addresses = hexfile.addresses()
         addresses.sort()
@@ -195,9 +195,8 @@ class FileProgrammer(object):
             try:
                 self._loader.add_data(start, data)
             except ValueError as e:
-                logging.warning("Failed to add data chunk: %s", e)
+                LOG.warning("Failed to add data chunk: %s", e)
 
-    # ELF format
     def _program_elf(self, file_obj, **kwargs):
         elf = ELFFile(file_obj)
         for segment in elf.iter_segments():
@@ -325,11 +324,11 @@ class FlashEraser(object):
                     flash = region.flash
                     flash.init(flash.Operation.ERASE)
         
-                # Get page info for the current address.
+                # Get sector info for the current address.
                 sector_info = flash.get_sector_info(sector_addr)
                 if not sector_info:
-                    # Should not fail to get page info within a flash region.
-                    raise RuntimeError("sector address 0x%08x within flash region '%s' is invalid" % (sector_addr, region.name))
+                    # Should not fail to get sector info within a flash region.
+                    raise exceptions.InternalError("sector address 0x%08x within flash region '%s' is invalid" % (sector_addr, region.name))
                 
                 # Align first page address.
                 delta = sector_addr % sector_info.size
@@ -340,7 +339,7 @@ class FlashEraser(object):
                 # Erase this page.
                 LOG.info("Erasing sector 0x%08x (%d bytes)", sector_addr, sector_info.size)
                 flash.erase_sector(sector_addr)
-
+                
                 sector_addr += sector_info.size
 
         if flash is not None:
@@ -387,7 +386,7 @@ class FlashLoader(object):
     
     Internally, FlashBuilder is used to optimise programming within each memory region.
     """
-    def __init__(self, session, progress=None, chip_erase=CHIP_ERASE_SENTINEL, smart_flash=None,
+    def __init__(self, session, progress=None, chip_erase=None, smart_flash=None,
         trust_crc=None, keep_unwritten=None):
         """! @brief Constructor.
         
@@ -397,8 +396,7 @@ class FlashLoader(object):
             If not set or None, a default progress handler will be used unless the session option
             'hide_programming_progress' is set to True, in which case progress will be disabled.
         @param chip_erase Sets whether to use chip erase or sector erase. The value must be one of
-            None, True, or False. None means the fastest erase method should be used. True means
-            to force chip erase, while False means force sector erase.
+            "auto", "sector", or "chip". "auto" means the fastest erase method should be used.
         @param smart_flash If set to True, the flash loader will attempt to not program pages whose
             contents are not going to change by scanning target flash memory. A value of False will
             force all pages to be erased and programmed.
@@ -415,20 +413,20 @@ class FlashLoader(object):
 
         if progress is not None:
             self._progress = progress
-        elif session.options.get('hide_programming_progress', False):
+        elif session.options.get('hide_programming_progress'):
             self._progress = None
         else:
             self._progress = print_progress()
 
         # We have to use a special sentinel object for chip_erase because None is a valid value.
-        self._chip_erase = chip_erase if (chip_erase is not CHIP_ERASE_SENTINEL) \
-                            else self._session.options.get('chip_erase', False)
+        self._chip_erase = chip_erase if (chip_erase is not None) \
+                            else self._session.options.get('chip_erase')
         self._smart_flash = smart_flash if (smart_flash is not None) \
-                            else self._session.options.get('smart_flash', True)
+                            else self._session.options.get('smart_flash')
         self._trust_crc = trust_crc if (trust_crc is not None) \
-                            else self._session.options.get('fast_program', False)
+                            else self._session.options.get('fast_program')
         self._keep_unwritten = keep_unwritten if (keep_unwritten is not None) \
-                            else self._session.options.get('keep_unwritten', True)
+                            else self._session.options.get('keep_unwritten')
         
         self._reset_state()
     
@@ -452,7 +450,7 @@ class FlashLoader(object):
             calls or a call to commit().
         
         @exception ValueError Raised when the address is not within a flash memory region.
-        @exception RuntimeError Raised if the flash memory region does not have a valid Flash
+        @exception TargetSupportError Raised if the flash memory region does not have a valid Flash
             instance associated with it, which indicates that the target connect sequence did
             not run successfully.
         """
@@ -473,7 +471,7 @@ class FlashLoader(object):
                 builder = self._builders[region]
             else:
                 if region.flash is None:
-                    raise RuntimeError("flash memory region at address 0x%08x has no flash instance" % address)
+                    raise exceptions.TargetSupportError("flash memory region at address 0x%08x has no flash instance" % address)
                 builder = region.flash.get_flash_builder()
                 builder.log_performance = False
                 self._builders[region] = builder
@@ -512,7 +510,7 @@ class FlashLoader(object):
             self._current_progress_fraction = builder.buffered_data_size / self._total_data_size
             
             # Program the data.
-            chipErase = self._chip_erase if not didChipErase else False
+            chipErase = self._chip_erase if not didChipErase else "sector"
             perf = builder.program(chip_erase=chipErase,
                                     progress_cb=self._progress_cb,
                                     smart_flash=self._smart_flash,

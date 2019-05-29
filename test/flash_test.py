@@ -118,7 +118,7 @@ class FlashTest(Test):
 
 
 def flash_test(board_id):
-    with ConnectHelper.session_with_chosen_probe(board_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
         board = session.board
         target_type = board.target_type
 
@@ -193,13 +193,13 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Basic Page Erase ------")
-            info = flash.flash_block(addr, data, False, False, progress_cb=print_progress())
-
+            info = flash.flash_block(addr, data, False, "sector", progress_cb=print_progress())
+            
             # CYPRESS PATCH START: Init flash region if not powered on boot
             if flash_init_required:
                 rom_region.flash.init(rom_region.flash.Operation.VERIFY)
             # CYPRESS PATCH END
-            
+
             data_flashed = target.read_memory_block8(addr, size)
 
             # CYPRESS PATCH START: Uninit flash region if was initialized above
@@ -215,13 +215,12 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Basic Chip Erase ------")
-            info = flash.flash_block(addr, data, False, True, progress_cb=print_progress())
-            
+            info = flash.flash_block(addr, data, False, "chip", progress_cb=print_progress())
             # CYPRESS PATCH START: Init flash region if not powered on boot
             if flash_init_required:
                 rom_region.flash.init(rom_region.flash.Operation.VERIFY)
             # CYPRESS PATCH END
-            
+
             data_flashed = target.read_memory_block8(addr, size)
             
             # CYPRESS PATCH START: Uninit flash region if was initialized above
@@ -237,8 +236,7 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Smart Page Erase ------")
-            info = flash.flash_block(addr, data, True, False, progress_cb=print_progress())
-            
+            info = flash.flash_block(addr, data, True, "sector", progress_cb=print_progress())
             # CYPRESS PATCH START: Init flash region if not powered on boot
             if flash_init_required:
                 rom_region.flash.init(rom_region.flash.Operation.VERIFY)
@@ -259,13 +257,13 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Smart Chip Erase ------")
-            info = flash.flash_block(addr, data, True, True, progress_cb=print_progress())
-            
+            info = flash.flash_block(addr, data, True, "chip", progress_cb=print_progress())
+
             # CYPRESS PATCH START: Uninit flash region if was initialized above
             if flash_init_required:
                 rom_region.flash.init(rom_region.flash.Operation.VERIFY)
             # CYPRESS PATCH END
-            
+
             data_flashed = target.read_memory_block8(addr, size)
             
             # CYPRESS PATCH START: Uninit flash region if was initialized above
@@ -285,7 +283,7 @@ def flash_test(board_id):
             print("\n------ Test Basic Page Erase (Entire region) ------")
             new_data = list(data)
             new_data.extend(unused * [0x77])
-            info = flash.flash_block(addr, new_data, False, False, progress_cb=print_progress())
+            info = flash.flash_block(addr, new_data, False, "sector", progress_cb=print_progress())
             if info.program_type == FlashBuilder.FLASH_SECTOR_ERASE:
                 print("TEST PASSED")
                 test_pass_count += 1
@@ -484,7 +482,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=level)
     DAPAccess.set_args(args.daparg)
     # Set to debug to print some of the decisions made while flashing
-    session = ConnectHelper.session_with_chosen_probe(open_session=False, **get_session_options())
+    session = ConnectHelper.session_with_chosen_probe(**get_session_options())
     test = FlashTest()
     result = [test.run(session.board)]
     test.print_perf_info(result)

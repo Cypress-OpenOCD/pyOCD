@@ -35,26 +35,32 @@ import logging, threading, socket
 from struct import unpack
 from time import (sleep, time)
 import sys
-import traceback
 import six
 from six.moves import queue
 from xml.etree.ElementTree import (Element, SubElement, tostring)
 
 CTRL_C = b'\x03'
 
-# Logging options. Set to True to enable.
-LOG_MEM = False # Log memory accesses.
-LOG_ACK = False # Log ack or nak.
-LOG_PACKETS = False # Log all packets sent and received.
+LOG = logging.getLogger(__name__)
+
+TRACE_MEM = LOG.getChild("trace_mem")
+TRACE_MEM.setLevel(logging.CRITICAL)
+
+TRACE_ACK = LOG.getChild("trace_ack")
+TRACE_ACK.setLevel(logging.CRITICAL)
+
+TRACE_PACKETS = LOG.getChild("trace_packet")
+TRACE_PACKETS.setLevel(logging.CRITICAL)
 
 def checksum(data):
     return ("%02x" % (sum(six.iterbytes(data)) % 256)).encode()
 
-## @brief De-escapes binary data from Gdb.
-#
-# @param data Bytes-like object with possibly escaped values.
-# @return List of integers in the range 0-255, with all escaped bytes de-escaped.
 def unescape(data):
+    """! @brief De-escapes binary data from Gdb.
+    
+    @param data Bytes-like object with possibly escaped values.
+    @return List of integers in the range 0-255, with all escaped bytes de-escaped.
+    """
     data_idx = 0
 
     # unpack the data into binary array
@@ -71,11 +77,12 @@ def unescape(data):
 
     return data
 
-## @brief Escape binary data to be sent to Gdb.
-#
-# @param data Bytes-like object containing raw binary.
-# @return Bytes object with the characters in '#$}*' escaped as required by Gdb.
 def escape(data):
+    """! @brief Escape binary data to be sent to Gdb.
+    
+    @param data Bytes-like object containing raw binary.
+    @return Bytes object with the characters in '#$}*' escaped as required by Gdb.
+    """
     result = b''
     for c in iter_single_bytes(data):
         if c in b'#$}*':
@@ -84,20 +91,27 @@ def escape(data):
             result += c
     return result
 
-## @brief Exception used to signal the GDB server connection closed.
-class ConnectionClosedException(Exception):
+class GDBError(exceptions.Error):
+    """! @brief Error communicating with GDB."""
     pass
 
-## @brief Packet I/O thread.
-#
-# This class is a thread used by the GDBServer class to perform all RSP packet I/O. It
-# handles verifying checksums, acking, and receiving Ctrl-C interrupts. There is a queue
-# for received packets. The interface to this queue is the receive() method. The send()
-# method writes outgoing packets to the socket immediately.
+class ConnectionClosedException(Exception):
+    """! @brief Exception used to signal the GDB server connection closed."""
+    pass
+
 class GDBServerPacketIOThread(threading.Thread):
+    """! @brief Packet I/O thread.
+    
+    This class is a thread used by the GDBServer class to perform all RSP packet I/O. It
+    handles verifying checksums, acking, and receiving Ctrl-C interrupts. There is a queue
+    for received packets. The interface to this queue is the receive() method. The send()
+    method writes outgoing packets to the socket immediately.
+    """
+    
     def __init__(self, abstract_socket):
-        super(GDBServerPacketIOThread, self).__init__(name="gdb-packet-thread")
-        self.log = logging.getLogger('gdbpacket.%d' % abstract_socket.port)
+        super(GDBServerPacketIOThread, self).__init__()
+        self.name = "gdb-packet-thread-port%d" % abstract_socket.port
+        self.log = LOG.getChild('gdbpacket')
         self._abstract_socket = abstract_socket
         self._receive_queue = queue.Queue()
         self._shutdown_event = threading.Event()
@@ -148,6 +162,8 @@ class GDBServerPacketIOThread(threading.Thread):
                     raise ConnectionClosedException()
 
     def run(self):
+        self.log.debug("Starting GDB server packet I/O thread")
+
         self._abstract_socket.set_timeout(0.01)
 
         while not self._shutdown_event.is_set():
@@ -160,8 +176,7 @@ class GDBServerPacketIOThread(threading.Thread):
                     self._closed = True
                     break
 
-                if LOG_PACKETS:
-                    self.log.debug('-->>>>>>>>>>>> GDB read %d bytes: %s', len(data), data)
+                TRACE_PACKETS.debug('-->>>> GDB read %d bytes: %s', len(data), data)
 
                 self._buffer += data
             except socket.error:
@@ -175,8 +190,7 @@ class GDBServerPacketIOThread(threading.Thread):
         self.log.debug("GDB packet thread stopping")
 
     def _write_packet(self, packet):
-        if LOG_PACKETS:
-            self.log.debug('--<<<<<<<<<<<< GDB send %d bytes: %s', len(packet), packet)
+        TRACE_PACKETS.debug('--<<<< GDB send %d bytes: %s', len(packet), packet)
 
         # Make sure the entire packet is sent.
         remaining = len(packet)
@@ -194,8 +208,7 @@ class GDBServerPacketIOThread(threading.Thread):
         c = self._buffer[0:1]
         if c in (b'+', b'-'):
             self._buffer = self._buffer[1:]
-            if LOG_ACK:
-                self.log.debug('got ack: %s', c)
+            TRACE_ACK.debug('got ack: %s', c)
             if c == b'-':
                 # Handle nack from gdb
                 self._write_packet(self._last_packet)
@@ -209,7 +222,7 @@ class GDBServerPacketIOThread(threading.Thread):
             self.log.debug("GDB: expected n/ack but got '%s'", c)
 
     def _process_data(self):
-        # Process all incoming data until there are no more complete packets.
+        """! @brief Process all incoming data until there are no more complete packets."""
         while len(self._buffer):
             if self._expecting_ack:
                 self._expecting_ack = False
@@ -243,19 +256,19 @@ class GDBServerPacketIOThread(threading.Thread):
         if self.send_acks:
             ack = b'+' if goodPacket else b'-'
             self._abstract_socket.write(ack)
-            if LOG_ACK:
-                self.log.debug(ack)
+            TRACE_ACK.debug(ack)
 
         if goodPacket:
             self._receive_queue.put(packet)
 
 class GDBServer(threading.Thread):
-    """
+    """! @brief GDB remote server thread.
+    
     This class start a GDB server listening a gdb connection on a specific port.
     It implements the RSP (Remote Serial Protocol).
     """
     def __init__(self, session, core=None, server_listening_callback=None):
-        threading.Thread.__init__(self)
+        super(GDBServer, self).__init__()
         self.session = session
         self.board = session.board
         if core is None:
@@ -264,24 +277,24 @@ class GDBServer(threading.Thread):
         else:
             self.core = core
             self.target = self.board.target.cores[core]
-        self.log = logging.getLogger('gdbserver')
+        self.name = "gdb-server-core%d" % self.core
+        self.log = LOG.getChild('gdbserver')
         self.abstract_socket = None
-        self.port = session.options.get('gdbserver_port', 3333)
+        self.port = session.options.get('gdbserver_port')
         if self.port != 0:
             self.port += self.core
-        self.telnet_port = session.options.get('telnet_port', 4444)
+        self.telnet_port = session.options.get('telnet_port')
         if self.telnet_port != 0:
             self.telnet_port += self.core
-        self.vector_catch = session.options.get('vector_catch', "h")
+        self.vector_catch = session.options.get('vector_catch')
         self.target.set_vector_catch(convert_vector_catch(self.vector_catch))
-        self.step_into_interrupt = session.options.get('step_into_interrupt', False)
-        self.persist = session.options.get('persist', False)
-        self.soft_bkpt_as_hard = session.options.get('soft_bkpt_as_hard', False)
-        self.enable_semihosting = session.options.get('enable_semihosting', False)
-        self.semihost_console_type = session.options.get('semihost_console_type', 'telnet')
-        self.semihost_use_syscalls = session.options.get('semihost_use_syscalls', False)
-        self.serve_local_only = session.options.get('serve_local_only', True)
-        self.report_core = session.options.get('report_core_number', False)
+        self.step_into_interrupt = session.options.get('step_into_interrupt')
+        self.persist = session.options.get('persist')
+        self.enable_semihosting = session.options.get('enable_semihosting')
+        self.semihost_console_type = session.options.get('semihost_console_type')
+        self.semihost_use_syscalls = session.options.get('semihost_use_syscalls')
+        self.serve_local_only = session.options.get('serve_local_only')
+        self.report_core = session.options.get('report_core_number')
         self.server_listening_callback = server_listening_callback
         self.packet_size = 2048
         self.packet_io = None
@@ -309,7 +322,7 @@ class GDBServer(threading.Thread):
         # Read back bound port in case auto-assigned (port 0)
         self.port = self.abstract_socket.port
 
-        self.target.subscribe(Target.EVENT_POST_RESET, self.event_handler)
+        self.session.subscribe(self.event_handler, Target.EVENT_POST_RESET)
 
         # Init semihosting and telnet console.
         if self.semihost_use_syscalls:
@@ -330,12 +343,12 @@ class GDBServer(threading.Thread):
         self.semihost = semihost.SemihostAgent(self.target_context, io_handler=semihost_io_handler, console=semihost_console)
         
         self._swv_reader = None
-        if session.options.get("enable_swv", False):
+        if session.options.get("enable_swv"):
             if "swv_system_clock" not in session.options:
                 self.log.warning("Cannot enable SWV due to missing swv_system_clock option")
             else:
                 sys_clock = int(session.options.get("swv_system_clock"))
-                swo_clock = int(session.options.get("swv_clock", 1000000))
+                swo_clock = int(session.options.get("swv_clock"))
                 self._swv_reader = SWVReader(session, self.core)
                 self._swv_reader.init(sys_clock, swo_clock, console_file)
 
@@ -448,10 +461,10 @@ class GDBServer(threading.Thread):
                 self.log.info("One client connected!")
                 self._run_connection()
                 self.log.info("Client disconnected!")
+                self._cleanup_for_next_connection()
 
             except Exception as e:
-                self.log.error("Unexpected exception: %s", e)
-                traceback.print_exc()
+                self.log.error("Unexpected exception: %s", e, exc_info=self.session.log_tracebacks)
 
     def _run_connection(self):
         while True:
@@ -479,8 +492,7 @@ class GDBServer(threading.Thread):
                             self.is_target_running = False
                             self.send_stop_notification()
                     except Exception as e:
-                        self.log.error("Unexpected exception: %s", e)
-                        traceback.print_exc()
+                        self.log.error("Unexpected exception: %s", e, exc_info=self.session.log_tracebacks)
 
                 # read command
                 try:
@@ -519,8 +531,7 @@ class GDBServer(threading.Thread):
                             return
 
             except Exception as e:
-                self.log.error("Unexpected exception: %s", e)
-                traceback.print_exc()
+                self.log.error("Unexpected exception: %s", e, exc_info=self.session.log_tracebacks)
 
     def handle_message(self, msg):
         try:
@@ -540,8 +551,7 @@ class GDBServer(threading.Thread):
             return reply, detach
 
         except Exception as e:
-            self.log.error("Unhandled exception in handle_message: %s", e)
-            traceback.print_exc()
+            self.log.error("Unhandled exception in handle_message: %s", e, exc_info=self.session.log_tracebacks)
             return self.create_rsp_packet(b"E01"), 0
 
     def extended_remote(self):
@@ -572,7 +582,7 @@ class GDBServer(threading.Thread):
         self.log.debug("GDB breakpoint %s%d @ %x" % (data[0:1], int(data[1:2]), addr))
 
         # handle software breakpoint Z0/z0
-        if data[1:2] == b'0' and not self.soft_bkpt_as_hard:
+        if data[1:2] == b'0':
             if data[0:1] == b'Z':
                 if not self.target.set_breakpoint(addr, Target.BREAKPOINT_SW):
                     return self.create_rsp_packet(b'E01') #EPERM
@@ -581,7 +591,7 @@ class GDBServer(threading.Thread):
             return self.create_rsp_packet(b"OK")
 
         # handle hardware breakpoint Z1/z1
-        if data[1:2] == b'1' or (self.soft_bkpt_as_hard and data[1:2] == b'0'):
+        if data[1:2] == b'1':
             if data[0:1] == b'Z':
                 if self.target.set_breakpoint(addr, Target.BREAKPOINT_HW) is False:
                     return self.create_rsp_packet(b'E01') #EPERM
@@ -724,22 +734,21 @@ class GDBServer(threading.Thread):
                     self.log.debug("state halted; pc=0x%08x", pc)
                     val = self.get_t_response()
                     break
-            except Exception as e:
+            except exceptions.Error as e:
                 try:
                     self.target.halt()
                 except:
                     pass
-                traceback.print_exc()
-                self.log.debug('Target is unavailable temporarily.')
+                self.log.warning('Exception while target was running: %s', e, exc_info=self.session.log_tracebacks)
                 val = ('S%02x' % self.target_facade.get_signal_value()).encode()
                 break
 
         return self.create_rsp_packet(val)
 
-    def step(self, data):
+    def step(self, data, start=0, end=0):
         addr = self._get_resume_step_addr(data)
-        self.log.debug("GDB step: %s", data)
-        self.target.step(not self.step_into_interrupt)
+        self.log.debug("GDB step: %s (start=0x%x, end=0x%x)", data, start, end)
+        self.target.step(not self.step_into_interrupt, start, end)
         return self.create_rsp_packet(self.get_t_response())
 
     def halt(self):
@@ -760,7 +769,7 @@ class GDBServer(threading.Thread):
 
         # v_cont capabilities query.
         elif b'Cont?' == cmd:
-            return self.create_rsp_packet(b"v_cont;c;C;s;S;t")
+            return self.create_rsp_packet(b"vCont;c;C;s;S;r;t")
 
         # v_cont, thread action command.
         elif cmd.startswith(b'Cont'):
@@ -816,14 +825,19 @@ class GDBServer(threading.Thread):
                 return self.create_rsp_packet(b"OK")
             else:
                 return self.resume(None)
-        elif thread_actions[currentThread][0:1] in (b's', b'S'):
+        elif thread_actions[currentThread][0:1] in (b's', b'S', b'r'):
+            start = 0
+            end = 0
+            if thread_actions[currentThread][0:1] == b'r':
+                start, end = [int(addr, base=16) for addr in thread_actions[currentThread][1:].split(b',')]
+	
             if self.non_stop:
-                self.target.step(not self.step_into_interrupt)
+                self.target.step(not self.step_into_interrupt, start, end)
                 self.packet_io.send(self.create_rsp_packet(b"OK"))
                 self.send_stop_notification()
                 return None
             else:
-                return self.step(None)
+                return self.step(None, start, end)
         elif thread_actions[currentThread] == b't':
             # Must ignore t command in all-stop mode.
             if not self.non_stop:
@@ -887,8 +901,7 @@ class GDBServer(threading.Thread):
         length = split[1].split(b'#')[0]
         length = int(length, 16)
 
-        if LOG_MEM:
-            self.log.debug("GDB getMem: addr=%x len=%x", addr, length)
+        TRACE_MEM.debug("GDB getMem: addr=%x len=%x", addr, length)
 
         try:
             mem = self.target_context.read_memory_block8(addr, length)
@@ -913,8 +926,7 @@ class GDBServer(threading.Thread):
         split = split[1].split(b'#')
         data = hex_to_byte_list(split[0])
 
-        if LOG_MEM:
-            self.log.debug("GDB writeMemHex: addr=%x len=%x", addr, length)
+        TRACE_MEM.debug("GDB writeMemHex: addr=%x len=%x", addr, length)
 
         try:
             if length > 0:
@@ -936,8 +948,7 @@ class GDBServer(threading.Thread):
         addr = int(split[0], 16)
         length = int(split[1].split(b':')[0], 16)
 
-        if LOG_MEM:
-            self.log.debug("GDB writeMem: addr=%x len=%x", addr, length)
+        TRACE_MEM.debug("GDB writeMem: addr=%x len=%x", addr, length)
 
         idx_begin = data.index(b':') + 1
         data = data[idx_begin:len(data) - 3]
@@ -1060,8 +1071,7 @@ class GDBServer(threading.Thread):
                     self.thread_provider = rtos
                     break
             except RuntimeError as e:
-                self.log.error("Error during symbol lookup: " + str(e))
-                traceback.print_exc()
+                self.log.error("Error during symbol lookup: " + str(e), exc_info=self.session.log_tracebacks)
 
         self.did_init_thread_providers = True
 
@@ -1079,13 +1089,13 @@ class GDBServer(threading.Thread):
         # Parse symbol value reply packet.
         packet = packet[1:-3]
         if not packet.startswith(b'qSymbol:'):
-            raise RuntimeError("Got unexpected response from gdb when asking for symbol value")
+            raise GDBError("Got unexpected response from gdb when asking for symbol value")
         packet = packet[8:]
         symValue, symName = packet.split(b':')
 
         symName = hex_decode(symName)
         if symName != name:
-            raise RuntimeError("Symbol value reply from gdb has unexpected symbol name")
+            raise GDBError("Symbol value reply from gdb has unexpected symbol name")
         if symValue:
             symValue = hex8_to_u32le(symValue)
         else:
@@ -1199,15 +1209,14 @@ class GDBServer(threading.Thread):
         elif query == b'threads':
             xml = self.get_threads_xml()
         else:
-            raise RuntimeError("Invalid XML query (%s)" % query)
+            raise GDBError("Invalid XML query (%s)" % query)
 
         size_xml = len(xml)
 
         prefix = b'm'
 
         if offset > size_xml:
-            self.log.error('GDB: xml offset > size for %s!', query)
-            return
+            raise GDBError('GDB: xml offset > size for %s!', query)
 
         if size > (self.packet_size - 4):
             size = self.packet_size - 4

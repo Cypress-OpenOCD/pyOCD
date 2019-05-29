@@ -14,17 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ..core import exceptions
 from ..target import TARGET
 from ..target.pack import pack_target
 from ..utility.graph import GraphNode
 import logging
 import six
 
-log = logging.getLogger('board')
+LOG = logging.getLogger(__name__)
 
 class Board(GraphNode):
-    """
-    This class associates a target and flash to create a board.
+    """!
+    @brief This class associates a target and flash to create a board.
     """
     def __init__(self, session, target=None):
         super(Board, self).__init__()
@@ -34,30 +35,42 @@ class Board(GraphNode):
             target = 'cortex_m'
         self._session = session
         self._target_type = target.lower()
-        self._test_binary = session.options.get('test_binary', None)
+        self._test_binary = session.options.get('test_binary')
         self._delegate = None
+        self._inited = False
         
         # Create targets from provided CMSIS pack.
-        if ('pack' in session.options) and (session.options['pack'] is not None):
-            pack_target.populate_targets_from_pack(session.options['pack'])
+        if session.options['pack'] is not None:
+            pack_target.PackTargets.populate_targets_from_pack(session.options['pack'])
 
         # Create targets from the cmsis-pack-manager cache.
         if self._target_type not in TARGET:
-            pack_target.populate_target_from_cache(target)
-        
+            pack_target.ManagedPacks.populate_target(target)
+
         # Create Target instance.
         try:
-            log.info("Target type is %s", self._target_type)
             self.target = TARGET[self._target_type](session)
         except KeyError as exc:
-            log.error("target '%s' not recognized", self._target_type)
-            six.raise_from(KeyError("target '%s' not recognized" % self._target_type), exc)
-        self._inited = False
+            six.raise_from(exceptions.TargetSupportError(
+                "Target type '%s' not recognized. Use 'pyocd list --targets' to see currently "
+                "available target types. "
+                "See <https://github.com/mbedmicro/pyOCD/blob/master/docs/target_support.md> "
+                "for how to install additional target support." % self._target_type), exc)
+        
+        # Tell the user what target type is selected.
+        LOG.info("Target type is %s", self._target_type)
+        
+        # Log a helpful warning when using the generic cortex_m target.
+        if self._target_type == 'cortex_m':
+            LOG.warning("Generic 'cortex_m' target type is selected; is this intentional? "
+                        "You will be able to debug but not program flash. To set the "
+                        "target type use the '--target' argument or 'target_override' option. "
+                        "Use 'pyocd list --targets' to see available targets types.")
         
         self.add_child(self.target)
 
-    ## @brief Initialize the board.
     def init(self):
+        """! @brief Initialize the board."""
         # If we don't have a delegate set yet, see if there is a session delegate.
         if (self.delegate is None) and (self.session.delegate is not None):
             self.delegate = self.session.delegate
@@ -74,16 +87,16 @@ class Board(GraphNode):
         if (self.delegate is not None) and hasattr(self.delegate, 'did_connect'):
             self.delegate.did_connect(board=self)
 
-    ## @brief Uninitialize the board.
     def uninit(self):
+        """! @brief Uninitialize the board."""
         if self._inited:
-            log.debug("uninit board %s", self)
+            LOG.debug("uninit board %s", self)
             try:
-                resume = self.session.options.get('resume_on_disconnect', True)
+                resume = self.session.options.get('resume_on_disconnect')
                 self.target.disconnect(resume)
                 self._inited = False
             except:
-                log.error("link exception during target disconnect:", exc_info=True)
+                LOG.error("link exception during target disconnect:", exc_info=self._session.log_tracebacks)
 
     @property
     def session(self):

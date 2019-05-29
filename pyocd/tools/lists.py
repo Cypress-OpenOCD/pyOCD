@@ -21,6 +21,7 @@ from .. import __version__
 from ..core.session import Session
 from ..core.helpers import ConnectHelper
 from ..target import TARGET
+from ..target.builtin import BUILTIN_TARGETS
 from ..board.board_ids import BOARD_ID_TO_INFO
 from ..target.pack import pack_target
 
@@ -68,33 +69,45 @@ class ListGenerator(object):
         return obj
 
     @staticmethod
-    def list_boards():
+    def list_boards(name_filter=None):
         """! @brief Generate dictionary with info about supported boards.
         
         Output version history:
         - 1.0, initial version
+        - 1.1, added is_target_builtin and is_target_supported keys
         """
+        # Lowercase name and vendor arguments for case-insensitive comparison.
+        if name_filter is not None:
+            name_filter = name_filter.lower()
+
         boards = []
         obj = {
             'pyocd_version' : __version__,
-            'version' : { 'major' : 1, 'minor' : 0 },
+            'version' : { 'major' : 1, 'minor' : 1 },
             'status' : 0,
             'boards' : boards
             }
 
+        managed_targets = [dev.part_number.lower() for dev in pack_target.ManagedPacks.get_installed_targets()]
+
         for board_id, info in BOARD_ID_TO_INFO.items():
+            # Filter by name.
+            if name_filter and name_filter not in info.name.lower():
+                continue
             d = {
                 'id' : board_id,
                 'name' : info.name,
                 'target': info.target,
                 'binary' : info.binary,
+                'is_target_builtin': (info.target in BUILTIN_TARGETS),
+                'is_target_supported': (info.target in TARGET or info.target in managed_targets)
                 }
             boards.append(d)
 
         return obj
 
     @staticmethod
-    def list_targets():
+    def list_targets(name_filter=None, vendor_filter=None, source_filter=None):
         """! @brief Generate dictionary with info about all supported targets.
         
         Output version history:
@@ -102,6 +115,12 @@ class ListGenerator(object):
         - 1.1, added part_families
         - 1.2, added source
         """
+        # Lowercase name and vendor arguments for case-insensitive comparison.
+        if name_filter is not None:
+            name_filter = name_filter.lower()
+        if vendor_filter is not None:
+            vendor_filter = vendor_filter.lower()
+
         targets = []
         obj = {
             'pyocd_version' : __version__,
@@ -111,14 +130,28 @@ class ListGenerator(object):
             }
 
         for name in TARGET.keys():
+            # Filter by name.
+            if name_filter and name_filter not in name.lower():
+                continue
+            
             s = Session(None) # Create empty session
             t = TARGET[name](s)
+            
+            # Filter by vendor.
+            if vendor_filter and vendor_filter not in t.vendor.lower():
+                continue
+            
+            # Filter by source.
+            source = 'pack' if hasattr(t, '_pack_device') else 'builtin'
+            if source_filter and source_filter != source:
+                continue
+            
             d = {
                 'name' : name,
                 'vendor' : t.vendor,
                 'part_families' : t.part_families,
                 'part_number' : t.part_number,
-                'source': 'pack' if hasattr(t, '_pack_device') else 'builtin',
+                'source': source,
                 }
             if t._svd_location is not None:
                 svdPath = t._svd_location.filename
@@ -126,22 +159,24 @@ class ListGenerator(object):
                     d['svd_path'] = svdPath
             targets.append(d)
         
-        # Add targets from cmsis-pack-manager cache.
-        for dev in pack_target.get_supported_targets():
-            try:
-                if 'vendor' in dev:
-                    vendor = dev['vendor'].split(':')[0]
-                else:
-                    vendor = dev['from_pack']['vendor']
-            
-                targets.append({
-                    'name' : dev['name'].lower(),
-                    'part_families' : [],
-                    'part_number' : dev['name'],
-                    'vendor' : vendor,
-                    'source' : 'pack',
-                    })
-            except KeyError:
-                pass
+        if not source_filter or source_filter == 'pack':
+            # Add targets from cmsis-pack-manager cache.
+            for dev in pack_target.ManagedPacks.get_installed_targets():
+                try:
+                    # Filter by name.
+                    if name_filter and name_filter not in dev.part_number.lower():
+                        continue
+                    # Filter by vendor.
+                    if vendor_filter and vendor_filter not in dev.vendor.lower():
+                        continue
+                    targets.append({
+                        'name' : dev.part_number.lower(),
+                        'part_families' : dev.families,
+                        'part_number' : dev.part_number,
+                        'vendor' : dev.vendor,
+                        'source' : 'pack',
+                        })
+                except KeyError:
+                    pass
 
         return obj

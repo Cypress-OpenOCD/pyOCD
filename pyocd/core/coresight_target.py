@@ -36,27 +36,28 @@ try:
 except ImportError:
     from inspect import getargspec
 
-##
-# @brief Represents a chip that uses CoreSight debug infrastructure.
-#
-# An instance of this class is the root of the chip-level object graph. It has child
-# nodes for the DP and all cores. As a concrete subclass of Target, it provides methods
-# to control the device, access memory, adjust breakpoints, and so on.
-#
-# For single core devices, the CoreSightTarget has mostly equivalent functionality to
-# the CortexM object for the core. Multicore devices work differently. This class tracks
-# a "selected core", to which all actions are directed. The selected core can be changed
-# at any time. You may also directly access specific cores and perform operations on them.
-class CoreSightTarget(Target, GraphNode):
+LOG = logging.getLogger(__name__)
 
+class CoreSightTarget(Target, GraphNode):
+    """! @brief Represents a chip that uses CoreSight debug infrastructure.
+    
+    An instance of this class is the root of the chip-level object graph. It has child
+    nodes for the DP and all cores. As a concrete subclass of Target, it provides methods
+    to control the device, access memory, adjust breakpoints, and so on.
+    
+    For single core devices, the CoreSightTarget has mostly equivalent functionality to
+    the CortexM object for the core. Multicore devices work differently. This class tracks
+    a "selected core", to which all actions are directed. The selected core can be changed
+    at any time. You may also directly access specific cores and perform operations on them.
+    """
+    
     def __init__(self, session, memoryMap=None):
         Target.__init__(self, session, memoryMap)
         GraphNode.__init__(self)
-        self.root_target = self
         self.part_number = self.__class__.__name__
         self.cores = {}
         self.dp = dap.DebugPort(session.probe, self)
-        self._selected_core = 0
+        self._selected_core = None
         self._svd_load_thread = None
         self._root_contexts = {}
         self._new_core_num = 0
@@ -65,13 +66,15 @@ class CoreSightTarget(Target, GraphNode):
 
     @property
     def selected_core(self):
+        if self._selected_core is None:
+            return None
         return self.cores[self._selected_core]
     
     @selected_core.setter
     def selected_core(self, core_number):
         if core_number not in self.cores:
             raise ValueError("invalid core number %d" % core_number)
-        logging.debug("selected core #%d" % core_number)
+        LOG.debug("selected core #%d" % core_number)
         self._selected_core = core_number
 
     @property
@@ -96,21 +99,21 @@ class CoreSightTarget(Target, GraphNode):
         return self.dp.aps
 
     @property
-    ## @brief Waits for SVD file to complete loading before returning.
     def svd_device(self):
+        """! @brief Waits for SVD file to complete loading before returning."""
         if not self._svd_device and self._svd_load_thread:
-            logging.debug("Waiting for SVD load to complete")
+            LOG.debug("Waiting for SVD load to complete")
             self._svd_device = self._svd_load_thread.device
         return self._svd_device
 
     def load_svd(self):
         def svd_load_completed_cb(svdDevice):
-#             logging.debug("Completed loading SVD")
+#             LOG.debug("Completed loading SVD")
             self._svd_device = svdDevice
             self._svd_load_thread = None
 
         if not self._svd_device and self._svd_location:
-#             logging.debug("Started loading SVD")
+#             LOG.debug("Started loading SVD")
 
             # Spawn thread to load SVD in background.
             self._svd_load_thread = SVDLoader(self._svd_location, svd_load_completed_cb)
@@ -119,10 +122,13 @@ class CoreSightTarget(Target, GraphNode):
     def add_core(self, core):
         core.halt_on_connect = self.halt_on_connect
         core.delegate = self.delegate
-        core.set_target_context(CachingDebugContext(DebugContext(core)))
+        core.set_target_context(CachingDebugContext(core))
         self.cores[core.core_number] = core
         self.add_child(core)
         self._root_contexts[core.core_number] = None
+        
+        if self._selected_core is None:
+            self._selected_core = core.core_number
 
     def create_init_sequence(self):
         seq = CallSequence(
@@ -136,7 +142,7 @@ class CoreSightTarget(Target, GraphNode):
             ('create_cores',        self.create_cores),
             ('create_components',   self.create_components),
             ('check_for_cores',     self.check_for_cores),
-            ('notify',              lambda : self.notify(Notification(event=Target.EVENT_POST_CONNECT, source=self)))
+            ('notify',              lambda : self.session.notify(Target.EVENT_POST_CONNECT, self))
             )
         
         return seq
@@ -164,10 +170,15 @@ class CoreSightTarget(Target, GraphNode):
             if region.flm is not None:
                 flmPath = self.session.find_user_file(None, [region.flm])
                 if flmPath is not None:
-                    logging.info("creating flash algo from: %s", flmPath)
+                    LOG.info("creating flash algo from: %s", flmPath)
                     packAlgo = PackFlashAlgo(flmPath)
+                    if self.session.options.get("debug.log_flm_info"):
+                        LOG.debug("Flash algo info: %s", packAlgo.flash_info)
+                    page_size = packAlgo.page_size
+                    if page_size <= 32:
+                        page_size = min(s[1] for s in packAlgo.sector_sizes)
                     algo = packAlgo.get_pyocd_flash_algo(
-                            max(s[1] for s in packAlgo.sector_sizes),
+                            page_size,
                             self.memory_map.get_first_region_of_type(MemoryType.RAM))
                 
                     # If we got a valid algo from the FLM, set it on the region. This will then
@@ -175,7 +186,7 @@ class CoreSightTarget(Target, GraphNode):
                     if algo is not None:
                         region.algo = algo
                 else:
-                    logging.warning("Failed to find FLM file: %s", region.flm)
+                    LOG.warning("Failed to find FLM file: %s", region.flm)
             
             # If the constructor of the region's flash class takes the flash_algo arg, then we
             # need the region to have a flash algo dict to pass to it. Otherwise we assume the
@@ -186,7 +197,7 @@ class CoreSightTarget(Target, GraphNode):
                 if region.algo is not None:
                     obj = klass(self, region.algo)
                 else:
-                    logging.warning("flash region '%s' has no flash algo" % region.name)
+                    LOG.warning("flash region '%s' has no flash algo" % region.name)
                     continue
             else:
                 obj = klass(self)
@@ -198,7 +209,7 @@ class CoreSightTarget(Target, GraphNode):
             region.flash = obj
     
     def _create_component(self, cmpid):
-        logging.debug("Creating %s component", cmpid.name)
+        LOG.debug("Creating %s component", cmpid.name)
         cmp = cmpid.factory(cmpid.ap, cmpid, cmpid.address)
         cmp.init()
 
@@ -221,13 +232,13 @@ class CoreSightTarget(Target, GraphNode):
         """! @brief Init task: verify that at least one core was discovered."""
         if not len(self.cores):
             # Allow the user to override the exception to enable uses like chip bringup.
-            if self.session.options.get('allow_no_cores', False):
-                logging.error("No cores were discovered!")
+            if self.session.options.get('allow_no_cores'):
+                LOG.error("No cores were discovered!")
             else:
-                raise exceptions.Error("No cores were discovered!")
+                raise exceptions.DebugError("No cores were discovered!")
 
     def disconnect(self, resume=True):
-        self.notify(Notification(event=Target.EVENT_PRE_DISCONNECT, source=self))
+        self.session.notify(Target.EVENT_PRE_DISCONNECT, self)
         self.call_delegate('will_disconnect', target=self, resume=resume)
         for core in self.cores.values():
             core.disconnect(resume)
@@ -241,8 +252,8 @@ class CoreSightTarget(Target, GraphNode):
     def halt(self):
         return self.selected_core.halt()
 
-    def step(self, disable_interrupts=True):
-        return self.selected_core.step(disable_interrupts)
+    def step(self, disable_interrupts=True, start=0, end=0):
+        return self.selected_core.step(disable_interrupts, start, end)
 
     def resume(self):
         return self.selected_core.resume()
@@ -308,6 +319,10 @@ class CoreSightTarget(Target, GraphNode):
         return self.selected_core.remove_watchpoint(addr, size, type)
 
     def reset(self, reset_type=None):
+        # Perform a hardware reset if there is not a core.
+        if self.selected_core is None:
+            self.session.probe.reset()
+            return
         self.selected_core.reset(reset_type)
 
     def reset_and_halt(self, reset_type=None):

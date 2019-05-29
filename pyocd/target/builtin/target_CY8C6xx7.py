@@ -26,6 +26,8 @@ from ...flash.flash import Flash
 from ...utility.notification import Notification
 from ...utility.timeout import Timeout
 
+LOG = logging.getLogger(__name__)
+
 flash_algo_main = {
     'load_address': 0x08000000,
 
@@ -225,9 +227,9 @@ class CY8C6xx7(CoreSightTarget):
         return seq
 
     def create_cy8c6xx7_core(self):
-        core0 = CortexM_CY8C6xx7(self, self.aps[1], self.memory_map, 0)
+        core0 = CortexM_CY8C6xx7(self.session, self.aps[1], self.memory_map, 0)
         core0.default_reset_type = self.ResetType.SW_SYSRESETREQ
-        core1 = CortexM_CY8C6xx7(self, self.aps[2], self.memory_map, 1)
+        core1 = CortexM_CY8C6xx7(self.session, self.aps[2], self.memory_map, 1)
         core1.default_reset_type = self.ResetType.SW_SYSRESETREQ
 
         self.aps[1].core = core0
@@ -240,7 +242,7 @@ class CY8C6xx7(CoreSightTarget):
 
 class CortexM_CY8C6xx7(CortexM):
     def reset(self, reset_type=None):
-        self.notify(Notification(event=Target.EVENT_PRE_RESET, source=self))
+        self.session.notify(Target.EVENT_PRE_RESET, self)
 
         self._run_token += 1
 
@@ -280,7 +282,7 @@ class CortexM_CY8C6xx7(CortexM):
                     
                     sleep(0.01)
 
-        self.notify(Notification(event=Target.EVENT_POST_RESET, source=self))
+        self.session.notify(Target.EVENT_POST_RESET, self)
 
     def wait_halted(self):
         with Timeout(5.0) as t_o:
@@ -292,7 +294,7 @@ class CortexM_CY8C6xx7(CortexM):
                     self.flush()
                     sleep(0.01)
             else:
-                raise Exception("Timeout waiting for target halt")
+                raise exceptions.TimeoutError("Timeout waiting for target halt")
 
     def reset_and_halt(self, reset_type=None):
         self.halt()
@@ -307,16 +309,16 @@ class CortexM_CY8C6xx7(CortexM):
         elif self.core_number == 1:
             vtbase = self.read_memory(0x402102C0)  # VTBASE_CM4
         else:
-            raise Exception("Invalid CORE ID")
+            raise exceptions.TargetError("Invalid CORE ID")
 
         vtbase &= 0xFFFFFF00
         if vtbase < 0x10000000 or vtbase > 0x18000000:
-            logging.info("Vector Table address invalid (0x%08X), will not halt at main()", vtbase)
+            LOG.info("Vector Table address invalid (0x%08X), will not halt at main()", vtbase)
             return
 
         entry = self.read_memory(vtbase + 4)
         if entry < 0x10000000 or entry > 0x18000000:
-            logging.info("Entry Point address invalid (0x%08X), will not halt at main()", entry)
+            LOG.info("Entry Point address invalid (0x%08X), will not halt at main()", entry)
             return
 
         self.set_breakpoint(entry)

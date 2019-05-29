@@ -14,13 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from ..core.target import Target
+from ..core.options import OPTIONS_INFO
 from ..utility.compatibility import to_str_safe
 
-## @brief Split command line by whitespace, supporting quoted strings.
-#
-# Accepts
+LOG = logging.getLogger(__name__)
+
 def split_command_line(cmd_line):
+    """! @brief Split command line by whitespace, supporting quoted strings."""
     result = []
     if type(cmd_line) is str:
         args = [cmd_line]
@@ -66,10 +68,11 @@ VECTOR_CATCH_CHAR_MAP = {
         'n': Target.CATCH_NONE,
     }
 
-## @brief Convert a vector catch string to a mask.
-#
-# @exception ValueError Raised if an invalid vector catch character is encountered.
 def convert_vector_catch(value):
+    """! @brief Convert a vector catch string to a mask.
+    
+    @exception ValueError Raised if an invalid vector catch character is encountered.
+    """
     # Make case insensitive.
     value = to_str_safe(value).lower()
 
@@ -86,24 +89,46 @@ def convert_vector_catch(value):
         # Reraise an error with a more helpful message.
         raise ValueError("invalid vector catch option '{}'".format(e.args[0]))
 
-## @brief Convert a list of session option settings to a dictionary.
-#
-#
 def convert_session_options(option_list):
+    """! @brief Convert a list of session option settings to a dictionary."""
     options = {}
     if option_list is not None:
         for o in option_list:
             if '=' in o:
-                name, value = o.split('=')
+                name, value = o.split('=', maxsplit=1)
                 name = name.strip().lower()
                 value = value.strip()
             else:
                 name = o.strip().lower()
-                if name.startswith('no-'):
-                    name = name[3:]
-                    value = False
+                value = None
+            
+            # Look for this option.
+            try:
+                info = OPTIONS_INFO[name]
+            except KeyError:
+                LOG.warning("ignoring unknown session option '%s'", name)
+                continue
+
+            # Handle bool options without a value specially.
+            if value is None:
+                if info.type is bool:
+                    if name.startswith('no-'):
+                        name = name[3:]
+                        value = False
+                    else:
+                        value = True
                 else:
-                    value = True
+                    LOG.warning("non-boolean option '%s' requires a value", name)
+                    continue
+            # Convert string value to option type.
+            elif info.type is bool:
+                value = value in ("true", "1", "yes", "on")
+            elif info.type is int:
+                try:
+                    value = int(value, base=0)
+                except ValueError:
+                    LOG.warning("invalid value for option '%s'", name)
+            
             options[name] = value
     return options
 
