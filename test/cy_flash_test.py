@@ -180,7 +180,7 @@ def flash_test(board_id):
         print("\n------ Test Program main hex ------")
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
         print("Start program %s to main flash" % (hex_file))
         start = time()
         programmer.program(hex_file)
@@ -207,7 +207,7 @@ def flash_test(board_id):
         print("\n------ Test Program main bin ------")
         bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.bin"]))
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
         print("Start program %s to main flash" % (bin_file))
         start = time()
         programmer.program(bin_file)
@@ -233,7 +233,7 @@ def flash_test(board_id):
         print("\n------ Test Program work hex ------")
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_work.hex"]))
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
         print("Start program %s to work flash" % (hex_file))
         start = time()
         programmer.program(hex_file)
@@ -270,7 +270,7 @@ def flash_test(board_id):
                     work_flash_region = flash_region
                     break
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
         print("Start program %s to work flash" % (bin_file))
         start = time()
         programmer.program(bin_file, format='bin', base_address=work_flash_region.start)
@@ -332,7 +332,7 @@ def flash_test(board_id):
             hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_super_flash_user.hex"]))
             sflash_ofset = 0x800
 
-            programmer = loader.FileProgrammer(session, chip_erase=True)
+            programmer = loader.FileProgrammer(session, chip_erase="chip")
             print("Start program %s to work flash" % (hex_file))
             start = time()
             programmer.program(hex_file)
@@ -364,7 +364,7 @@ def flash_test(board_id):
                     s_flash_region = flash_region
                     break
 
-            programmer = loader.FileProgrammer(session, chip_erase=True)
+            programmer = loader.FileProgrammer(session, chip_erase="chip")
             print("Start program %s to work flash" % (bin_file))
             start = time()
             programmer.program(bin_file, format='bin', base_address=s_flash_region.start + sflash_ofset)
@@ -393,7 +393,7 @@ def flash_test(board_id):
                 print("\n------ Test Program smif bin ------")
                 bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.bin"]))
 
-                programmer = loader.FileProgrammer(session, chip_erase=True)
+                programmer = loader.FileProgrammer(session, chip_erase="chip")
                 print("Start program %s to flash" % (bin_file))
                 start = time()
                 programmer.program(bin_file, format='bin', base_address=smif_flash_region.start)
@@ -418,7 +418,7 @@ def flash_test(board_id):
                 print("\n------ Test Program smif hex ------")
                 hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.hex"]))
 
-                programmer = loader.FileProgrammer(session, chip_erase=True)
+                programmer = loader.FileProgrammer(session, chip_erase="chip")
                 print("Start program %s to work flash" % (hex_file))
                 start = time()
                 programmer.program(hex_file)
@@ -444,7 +444,7 @@ def flash_test(board_id):
         print("\n------ Test mass erase ------")
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
         print("Start program %s to main flash"% (hex_file))
         programmer.program(hex_file)
         session.target.mass_erase()
@@ -469,7 +469,7 @@ def flash_test(board_id):
 
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_BlinkFull.hex"]))
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
         print("Start program %s to flash"% (hex_file))
         start = time()
         programmer.program(hex_file)
@@ -534,7 +534,7 @@ def flash_test(board_id):
 
         elf_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_BlinkFull.elf"]))
 
-        programmer = loader.FileProgrammer(session, chip_erase=True)
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
         print("Start program %s to flash"% (elf_file))
         start = time()
         programmer.program(elf_file)
