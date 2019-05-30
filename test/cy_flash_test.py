@@ -510,7 +510,7 @@ def flash_test(board_id):
 
         main_flash_region = memory_map.get_boot_memory()
 
-        main_flash_region.flash.flash_block(main_flash_region.start, data, False, True, progress_cb=print_progress())
+        main_flash_region.flash.flash_block(main_flash_region.start, data, False, "chip", progress_cb=print_progress())
 
         print("Start verification")
 
@@ -593,7 +593,7 @@ def flash_test(board_id):
 
             # Turn on extra checks for the next 4 tests
             flash.set_flash_algo_debug(True)
-            flash.flash_block(addr, data, False, False, progress_cb=print_progress())
+            flash.flash_block(addr, data, False, None, progress_cb=print_progress())
 
             data_read = cy_read_memory_block8(flash_region, target, addr, size)
 
@@ -616,7 +616,7 @@ def flash_test(board_id):
             test_count += 1
 
             print("\n------ Test Flash Erase Page ------")
-            flash.flash_block(rom_start, data, False, False, progress_cb=print_progress())
+            flash.flash_block(rom_start, data, False, None, progress_cb=print_progress())
 
             data_read = cy_read_memory_block8(flash_region, target, rom_start, len(data))
 
