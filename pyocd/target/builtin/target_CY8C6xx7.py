@@ -246,7 +246,7 @@ class CortexM_CY8C6xx7(CortexM):
         self.session.notify(Target.EVENT_PRE_RESET, self)
 
         self._run_token += 1
-
+        
         if reset_type is Target.ResetType.HW:
             self.session.probe.reset()
             sleep(0.5)
@@ -328,3 +328,4 @@ class CortexM_CY8C6xx7(CortexM):
         sleep(0.2)
         self.wait_halted()
         self.remove_breakpoint(entry)
+        self.bp_manager.flush()

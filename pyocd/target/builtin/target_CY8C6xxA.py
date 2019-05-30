@@ -515,3 +515,4 @@ class CortexM_CY8C6xxA(CortexM):
         sleep(0.2)
         self.wait_halted()
         self.remove_breakpoint(entry)
+        self.bp_manager.flush()
