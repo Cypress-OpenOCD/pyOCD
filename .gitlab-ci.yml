@@ -74,6 +74,8 @@ win10_py_3.7_basic_test:
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
+    - pip install mbed-ls
+    - mbedls -j
     - pushd test
     - pyocd list
     - echo [INFO] Running basic tests
@@ -188,6 +190,8 @@ win10_py_3.7_functional_test:
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
+    - pip install mbed-ls
+    - mbedls -j
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
@@ -209,6 +213,8 @@ win7_py_2.7_functional_test:
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
+    - pip install mbed-ls
+    - mbedls -j
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
@@ -230,6 +236,8 @@ ub_py_3.7_functional_test:
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - pip3 install -r dev-requirements.txt
+    - pip install mbed-ls
+    - mbedls -j
     - pushd test
     - echo [INFO] Running functional tests
     - python3 automated_test.py
@@ -251,6 +259,8 @@ ub_py_2.7_functional_test:
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
+    - pip install mbed-ls
+    - mbedls -j
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
@@ -272,6 +282,8 @@ mac1014_py_3.7_functional_test:
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
+    - pip install mbed-ls
+    - mbedls -j
     - pushd test
     - echo [INFO] Running functional tests
     - python3 automated_test.py
@@ -293,6 +305,8 @@ mac1013_py_2.7_functional_test:
     - pip uninstall cmsis-pack-manager --yes
     - pip install cmsis-pack-manager
     - pip install -r dev-requirements.txt
+    - pip install mbed-ls
+    - mbedls -j
     - pushd test
     - echo [INFO] Running functional tests
     - python automated_test.py
