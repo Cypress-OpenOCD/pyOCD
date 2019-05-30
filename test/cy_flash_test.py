@@ -161,7 +161,7 @@ def flash_test(board_id):
         print("TEST FAILED")
     test_count += 1
 
-    with ConnectHelper.session_with_chosen_probe(board_id=board_id, **get_session_options()) as session:
+    with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
         board = session.board
         target = board.target
         memory_map = board.target.get_memory_map()
