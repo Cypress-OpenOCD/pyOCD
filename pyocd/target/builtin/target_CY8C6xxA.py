@@ -401,6 +401,7 @@ class CY8C6xxA(CoreSightTarget):
         FlashRegion(start=0x18000000, length=0x4000000, blocksize=0x40000, page_size=0x1000,
                                                         is_boot_memory=False,
                                                         erased_byte_value=0xFF,
+                                                        is_testable=False,
                                                         is_powered_on_boot=False,
                                                         algo=flash_algo_smif,
                                                         erase_all_weight=140,
