@@ -95,7 +95,7 @@ def convert_session_options(option_list):
     if option_list is not None:
         for o in option_list:
             if '=' in o:
-                name, value = o.split('=', maxsplit=1)
+                name, value = o.split('=', 1)
                 name = name.strip().lower()
                 value = value.strip()
             else:
