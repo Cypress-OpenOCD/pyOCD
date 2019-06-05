@@ -172,7 +172,7 @@ def flash_test(board_id):
             test_kit = "CY8CPROTO-063-4343W"
         elif board_id[:4] == "1909":
             test_kit = "CY8CPROTO-063-4343W"
-        elif board_id[:4] == "19FF":
+        elif board_id[:4] == "1907":
             test_kit = "CY8C6347BZI-BLD53_SEC"
         else:
             test_kit = "CY8C6347BZI-BLD53"
@@ -450,7 +450,7 @@ def flash_test(board_id):
         session.target.mass_erase()
 
         for rom_region in memory_map.get_regions_of_type(MemoryType.FLASH):
-            if not rom_region.is_testable:
+            if rom_region.start == 0x16000000:
                 continue
             rom_start = rom_region.start
             rom_size = rom_region.length
