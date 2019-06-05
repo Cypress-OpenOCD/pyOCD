@@ -111,15 +111,17 @@ ub_py_3.7_basic_test:
     - virtualenv venv
     - source venv/bin/activate
     - echo [INFO] Installing python modules
-    - pip install setuptools_scm
-    - pip install setuptools_scm_git_archive
-    - pip uninstall cmsis-pack-manager --yes
-    - pip install cmsis-pack-manager
-    - pip install -r dev-requirements.txt
+    - pip3 install setuptools_scm
+    - pip3 install setuptools_scm_git_archive
+    - pip3 uninstall pyusb --yes
+    - pip3 install pyusb
+    - pip3 uninstall cmsis-pack-manager --yes
+    - pip3 install cmsis-pack-manager
+    - pip3 install -r dev-requirements.txt
     - pushd test
     - pyocd list
     - echo [INFO] Running basic tests
-    - python cy_basic_test.py
+    - python3 cy_basic_test.py
   allow_failure: true
     
     
