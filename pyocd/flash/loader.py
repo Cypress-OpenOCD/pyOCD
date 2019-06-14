@@ -289,6 +289,7 @@ class FlashEraser(object):
         for region in self._session.target.memory_map.get_regions_of_type(MemoryType.FLASH):
             if region.flash is not None:
                 if region.flash.is_erase_all_supported:
+                    LOG.info("Erasing region [0x%08x-0x%08x]", region.start, region.end)
                     region.flash.init(region.flash.Operation.ERASE)
                     region.flash.erase_all()
                     region.flash.cleanup()

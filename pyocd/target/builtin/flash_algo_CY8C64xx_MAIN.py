@@ -53,7 +53,7 @@ flash_algo = {
     'pc_unInit': 0x08000065,
     'pc_program_page': 0x080000b5,
     'pc_erase_sector': 0x080000ad,
-    'pc_eraseAll': 0x08000069,
+    #'pc_eraseAll': 0x08000069,
 
     'static_base' : 0x08000000 + 0x00000020 + 0x000002f4,
     'begin_stack' : 0x08000600,
