@@ -17,9 +17,9 @@
 import logging
 from time import (sleep)
 
-from .flash_algo_CY8C64xx_MAIN import flash_algo as flash_algo_main
-from .flash_algo_CY8C64xx_WORK import flash_algo as flash_algo_work
-from .flash_algo_CY8C64xx_STATIC_SMIF import flash_algo as flash_algo_smif
+from .flash_algo_CY8C64xx import flash_algo as flash_algo_main
+from .flash_algo_CY8C6xxx_WFLASH import flash_algo as flash_algo_work
+from .flash_algo_CY8C6xxx_SMIF_S25FL128S import flash_algo as flash_algo_smif
 from .target_CY8C6xx7 import CortexM_CY8C6xx7
 
 from ...core import exceptions
@@ -84,6 +84,7 @@ class cy8c64xx(CoreSightTarget):
         RomRegion(start=0x00000000, length=0x20000),
 
         FlashRegion(start=0x10000000, length=0xD0000, blocksize=0x200,
+#        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200,
                     is_boot_memory=True,
                     erased_byte_value=0,
                     algo=flash_algo_main,
