@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from time import (time, sleep)
+from time import sleep
 
 from .flash_algo_CY8C6xxA import flash_algo as flash_algo_main
 from .flash_algo_CY8C6xxA_WFLASH import flash_algo as flash_algo_work
@@ -25,8 +25,6 @@ from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
 from ...core.target import Target
 from ...coresight.cortex_m import CortexM
-from ...flash.flash import Flash
-from ...utility.notification import Notification
 from ...utility.timeout import Timeout
 
 LOG = logging.getLogger(__name__)
@@ -140,7 +138,7 @@ class CortexM_CY8C6xxA(CortexM):
             while t_o.check():
                 try:
                     if not self.is_running():
-                        return
+                        break
                 except exceptions.TransferError:
                     self.flush()
                     sleep(0.01)
