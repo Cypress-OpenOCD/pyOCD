@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from time import (sleep)
+from time import sleep
 
 from .flash_algo_CY8C64xx import flash_algo as flash_algo_main
 from .flash_algo_CY8C6xxx_WFLASH import flash_algo as flash_algo_work
@@ -27,7 +27,6 @@ from ...core.coresight_target import CoreSightTarget
 from ...core.memory_map import (FlashRegion, RamRegion, RomRegion, MemoryMap)
 from ...core.target import Target
 from ...coresight.cortex_m import CortexM
-from ...utility.notification import Notification
 from ...utility.timeout import Timeout
 from ...flash.flash import Flash
 
@@ -149,8 +148,7 @@ class CortexM_CY8C64xx(CortexM):
         if reset_type is Target.ResetType.HW:
             self.session.probe.reset()
             self.reinit_dap()
-            # This is ugly, but FPB gets disabled after HW Reset so breakpoints stop working
-            self.bp_manager._fpb.enable()
+            self.fpb.enable()
 
         else:
             if reset_type is Target.ResetType.SW_VECTRESET:
@@ -183,7 +181,7 @@ class CortexM_CY8C64xx(CortexM):
             while t_o.check():
                 try:
                     if not self.is_running():
-                        return
+                        break
                 except exceptions.TransferError:
                     self.flush()
                     sleep(0.01)
