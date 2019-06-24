@@ -172,6 +172,8 @@ def flash_test(board_id):
             test_kit = "CY8CPROTO-063-4343W"
         elif board_id[:4] == "1909":
             test_kit = "CY8CPROTO-063-4343W"
+        elif board_id[:4] == "190B":
+            test_kit = "CY8CPROTO-063-4343W"
         elif board_id[:4] == "1907":
             test_kit = "CY8CKIT-064_SPM"
         else:
