@@ -107,8 +107,7 @@ class CortexM_CY8C6xxA(CortexM):
             sleep(0.5)
             self._ap.dp.init()
             self._ap.dp.power_up_debug()
-            # This is ugly, but FPB gets disabled after HW Reset so breakpoints stop working
-            self.bp_manager._fpb.enable()
+            self.fpb.enable()
 
         else:
             if reset_type is Target.ResetType.SW_VECTRESET:

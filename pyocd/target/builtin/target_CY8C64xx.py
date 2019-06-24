@@ -149,8 +149,7 @@ class CortexM_CY8C64xx(CortexM):
         if reset_type is Target.ResetType.HW:
             self.session.probe.reset()
             self.reinit_dap()
-            # This is ugly, but FPB gets disabled after HW Reset so breakpoints stop working
-            self.bp_manager._fpb.enable()
+            self.fpb.enable()
 
         else:
             if reset_type is Target.ResetType.SW_VECTRESET:
