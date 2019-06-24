@@ -250,11 +250,11 @@ class CortexM_CY8C64xx(CortexM):
 
     def resume(self):
         global is_flashing
+        super(CortexM_CY8C64xx, self).resume()
+        
         if not is_flashing:
             LOG.info("Clearing TEST_MODE bit...")
             self.write32(0x40260100, 0x00000000)
-
-        super(CortexM_CY8C64xx, self).resume()
 
 
 class cy8c64xx_cm0(cy8c64xx):
