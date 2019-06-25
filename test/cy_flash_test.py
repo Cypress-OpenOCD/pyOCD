@@ -479,25 +479,32 @@ def flash_test(board_id):
         diff = stop - start
         print("Elapsed time is %.3f seconds"% (diff))
 
-        # binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_BlinkFull.bin"]))
-        # with open(binary_file, "rb") as f:
-        #     data = f.read()
-        # data = struct.unpack("%iB" % len(data), data)
-        # 
-        # print("Start verification")
-        # main_flash_region = memory_map.get_boot_memory()
-        # 
-        # data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
-        # if same(data_flashed, data):
-        target.reset()
-        sleep(3)
+        binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_BlinkFull.bin"]))
+        with open(binary_file, "rb") as f:
+            data = f.read()
+        data = struct.unpack("%iB" % len(data), data)
+         
+        print("Start verification")
+        main_flash_region = memory_map.get_boot_memory()
+         
+        data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
+        if same(data_flashed, data):
+            if test_kit != "CY8CKIT-064_SPM":
+            #PROGTOOLS - 521
+                target.reset()
+                sleep(3)
             
-        num = len(target.cores) - 1
+                num = len(target.cores) - 1
  
-        status = target.cores[num].get_state()
-        if status == Target.TARGET_RUNNING:
-            print("TEST PASSED")
-            test_pass_count += 1
+                status = target.cores[num].get_state()
+                if status == Target.TARGET_RUNNING:
+                    print("TEST PASSED")
+                    test_pass_count += 1
+                else:
+                    print("TEST FAILED")
+            else:
+                print("TEST PASSED")
+                test_pass_count += 1
         else:
             print("TEST FAILED")
         test_count += 1
@@ -518,15 +525,21 @@ def flash_test(board_id):
 
         data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
-            target.reset()
-            sleep(3)
+            if test_kit != "CY8CKIT-064_SPM":
+            #PROGTOOLS-521
 
-            status = target.cores[0].get_state()
-            if status == Target.TARGET_RUNNING:
+                target.reset()
+                sleep(3)
+
+                status = target.cores[0].get_state()
+                if status == Target.TARGET_RUNNING:
+                    print("TEST PASSED")
+                    test_pass_count += 1
+                else:
+                    print("TEST FAILED")
+            else:
                 print("TEST PASSED")
                 test_pass_count += 1
-            else:
-                print("TEST FAILED")
         else:
             print("TEST FAILED")
         test_count += 1
