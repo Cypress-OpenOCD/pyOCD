@@ -208,6 +208,7 @@ class CortexM_CY8C64xx(CortexM):
                 try:
                     self._ap.dp.init()
                     self._ap.dp.power_up_debug()
+                    self.write32(0x4023004C, 0)
                     self.write32(0x40260100, 0x80000000)
                     self.flush()
                     return
