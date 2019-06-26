@@ -157,4 +157,5 @@ BUILTIN_TARGETS = {
           'musca_b1' : target_musca_b1.MuscaB1,
           'lpc55s69' : target_LPC55S69JBD100.LPC55S69JBD100,
           'cy8c64xx_cm4_full' : target_CY8C64xx.cy8c64xx_cm4_full,
+          'cy8c64xx_cm4_full_flash' : target_CY8C64xx.cy8c64xx_cm4_full_flash,
          }

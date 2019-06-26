@@ -268,7 +268,44 @@ class cy8c64xx_cm4(cy8c64xx):
         super(cy8c64xx_cm4, self).__init__(link, 2)
 
 
+class cy8c64xx_cm4_full_flash(cy8c64xx):
+    memoryMap = MemoryMap(
+        RomRegion(start=0x00000000, length=0x20000),
 
+        FlashRegion(start=0x10000000, length=0x100000, blocksize=0x200,
+                    is_boot_memory=True,
+                    erased_byte_value=0,
+                    algo=flash_algo_main,
+                    erase_all_weight=ERASE_ALL_WEIGHT,
+                    erase_sector_weight=ERASE_SECTOR_WEIGHT,
+                    program_page_weight=PROGRAM_PAGE_WEIGHT,
+                    flash_class=Flash_CY8C64xx_Main),
+
+        FlashRegion(start=0x14000000, length=0x8000, blocksize=0x200,
+                    is_boot_memory=False,
+                    erased_byte_value=0,
+                    algo=flash_algo_work,
+                    erase_all_weight=ERASE_ALL_WEIGHT,
+                    erase_sector_weight=ERASE_SECTOR_WEIGHT,
+                    program_page_weight=PROGRAM_PAGE_WEIGHT,
+                    flash_class=Flash_CY8C64xx_Work),
+
+        FlashRegion(start=0x18000000, length=0x1000000, blocksize=0x40000, page_size=0x1000,
+                    is_boot_memory=False,
+                    is_testable=False,
+                    erased_byte_value=0xFF,
+                    is_powered_on_boot=False,
+                    algo=flash_algo_smif,
+                    erase_all_weight=140,
+                    erase_sector_weight=1,
+                    program_page_weight=1,
+                    flash_class=Flash_CY8C64xx_SMIF),
+
+        RamRegion(start=0x08000000, length=0x20000)
+    )
+    
+    def __init__(self, link):
+        super(cy8c64xx_cm4_full_flash, self).__init__(link, 2)
 
 
 
