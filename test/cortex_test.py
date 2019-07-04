@@ -312,6 +312,7 @@ def cortex_test(board_id):
         target.write_core_registers_raw(['r0', 'r1', 'r2', 'r3'], origRegs)
 
         if target.selected_core.has_fpu:
+            target.write_core_register('s0', math.pi)
             print("Reading s0")
             val = target.read_core_register('s0')
             rawVal = target.read_core_register_raw('s0')
