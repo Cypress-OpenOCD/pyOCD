@@ -198,7 +198,7 @@ def flash_test(board_id):
         print("Start verification")
         main_flash_region = memory_map.get_boot_memory()
 
-        data_flashed = target.read_memory_block8(main_flash_region.start, main_flash_region.length)
+        data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -224,7 +224,7 @@ def flash_test(board_id):
         print("Start verification")
         main_flash_region = memory_map.get_boot_memory()
 
-        data_flashed = target.read_memory_block8(main_flash_region.start, main_flash_region.length)
+        data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -255,7 +255,7 @@ def flash_test(board_id):
                     work_flash_region = flash_region
                     break
 
-        data_flashed = target.read_memory_block8(work_flash_region.start, work_flash_region.length)
+        data_flashed = target.read_memory_block8(work_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -286,7 +286,7 @@ def flash_test(board_id):
 
         print("Start verification")
 
-        data_flashed = target.read_memory_block8(work_flash_region.start, work_flash_region.length)
+        data_flashed = target.read_memory_block8(work_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -304,8 +304,6 @@ def flash_test(board_id):
         if len(data) > ram_region.length:
            data = data[:ram_region.length]
 
-        size = len(data)
-
         print("Start load %s to ram"% (binary_file))
         start = time()
         target.write_memory_block8(ram_region.start, data)
@@ -314,7 +312,7 @@ def flash_test(board_id):
         print("Elapsed time is %.3f seconds"% (diff))
 
         print("Start verification")
-        data_read = target.read_memory_block8(ram_region.start, size)
+        data_read = target.read_memory_block8(ram_region.start, len(data))
         if same(data_read, data):
            print("TEST PASSED")
            test_pass_count += 1
@@ -418,7 +416,7 @@ def flash_test(board_id):
                 test_count += 1
 
                 print("\n------ Test Program smif hex ------")
-                hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.hex"]))
+                hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal_half.hex"]))
 
                 programmer = loader.FileProgrammer(session, chip_erase="chip")
                 print("Start program %s to work flash" % (hex_file))
@@ -428,13 +426,13 @@ def flash_test(board_id):
                 diff = stop - start
                 print("Elapsed time is %.3f seconds" % (diff))
 
-                binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.bin"]))
+                binary_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal_half.bin"]))
                 with open(binary_file, "rb") as f:
                     data = f.read()
                 data = struct.unpack("%iB" % len(data), data)
 
                 print("Start verification")
-                data_read = cy_read_memory_block8(flash_region, target, smif_flash_region.start, len(data))
+                data_read = cy_read_memory_block8(flash_region, target, int(smif_flash_region.start + smif_flash_region.length/2), len(data))
 
                 if same(data_read, data):
                     print("TEST PASSED")
@@ -489,7 +487,7 @@ def flash_test(board_id):
          
         data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
-            if test_kit != "CY8CKIT-064_SPM":
+            if test_kit != "CY8CKIT-064_CM4":
             #PROGTOOLS - 521
                 target.reset()
                 sleep(3)
@@ -525,7 +523,7 @@ def flash_test(board_id):
 
         data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
-            if test_kit != "CY8CKIT-064_SPM":
+            if test_kit != "CY8CKIT-064_CM4":
             #PROGTOOLS-521
 
                 target.reset()
