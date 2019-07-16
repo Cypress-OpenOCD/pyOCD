@@ -105,6 +105,19 @@ def flash_test(board_id):
     test_count = 0
     result = CyFlashTestResult()
 
+    if board_id[:4] == "1901":
+        test_kit = "CY8CPROTO-063-4343W"
+    elif board_id[:4] == "1905":
+        test_kit = "CY8CPROTO-063-4343W"
+    elif board_id[:4] == "1909":
+        test_kit = "CY8CPROTO-063-4343W"
+    elif board_id[:4] == "190B":
+        test_kit = "CY8CPROTO-063-4343W"
+    elif board_id[:4] == "1907":
+        test_kit = "CY8CKIT-064_CM4"
+    else:
+        test_kit = "CY8C6347BZI-BLD53"
+
     print("\n------ Test List probes ------")
     allProbes = ConnectHelper.get_all_connected_probes(blocking=False)
     if len(allProbes) >= BOARDS_IN_TEST:
@@ -159,25 +172,12 @@ def flash_test(board_id):
         test_pass_count += 1
     else:
         print("TEST FAILED")
-    test_count += 1
+    test_count += 1    
 
     with ConnectHelper.session_with_chosen_probe(unique_id=board_id, **get_session_options()) as session:
         board = session.board
         target = board.target
         memory_map = board.target.get_memory_map()
-
-        if board_id[:4] == "1901":
-            test_kit = "CY8CPROTO-063-4343W"
-        elif board_id[:4] == "1905":
-            test_kit = "CY8CPROTO-063-4343W"
-        elif board_id[:4] == "1909":
-            test_kit = "CY8CPROTO-063-4343W"
-        elif board_id[:4] == "190B":
-            test_kit = "CY8CPROTO-063-4343W"
-        elif board_id[:4] == "1907":
-            test_kit = "CY8CKIT-064_CM4"
-        else:
-            test_kit = "CY8C6347BZI-BLD53"
 
         print("\n------ Test Program main hex ------")
         hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
@@ -198,7 +198,7 @@ def flash_test(board_id):
         print("Start verification")
         main_flash_region = memory_map.get_boot_memory()
 
-        data_flashed = target.read_memory_block8(main_flash_region.start, main_flash_region.length)
+        data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -224,7 +224,7 @@ def flash_test(board_id):
         print("Start verification")
         main_flash_region = memory_map.get_boot_memory()
 
-        data_flashed = target.read_memory_block8(main_flash_region.start, main_flash_region.length)
+        data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -255,7 +255,7 @@ def flash_test(board_id):
                     work_flash_region = flash_region
                     break
 
-        data_flashed = target.read_memory_block8(work_flash_region.start, work_flash_region.length)
+        data_flashed = target.read_memory_block8(work_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -286,7 +286,7 @@ def flash_test(board_id):
 
         print("Start verification")
 
-        data_flashed = target.read_memory_block8(work_flash_region.start, work_flash_region.length)
+        data_flashed = target.read_memory_block8(work_flash_region.start, len(data))
         if same(data_flashed, data):
             print("TEST PASSED")
             test_pass_count += 1
@@ -304,8 +304,6 @@ def flash_test(board_id):
         if len(data) > ram_region.length:
            data = data[:ram_region.length]
 
-        size = len(data)
-
         print("Start load %s to ram"% (binary_file))
         start = time()
         target.write_memory_block8(ram_region.start, data)
@@ -314,7 +312,7 @@ def flash_test(board_id):
         print("Elapsed time is %.3f seconds"% (diff))
 
         print("Start verification")
-        data_read = target.read_memory_block8(ram_region.start, size)
+        data_read = target.read_memory_block8(ram_region.start, len(data))
         if same(data_read, data):
            print("TEST PASSED")
            test_pass_count += 1
@@ -391,12 +389,12 @@ def flash_test(board_id):
         for flash_region in memory_map.get_regions_of_type(MemoryType.FLASH):
             if flash_region.start == 0x18000000:
                 smif_flash_region = flash_region
-
+                
                 print("\n------ Test Program smif bin ------")
                 bin_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.bin"]))
 
                 programmer = loader.FileProgrammer(session, chip_erase="chip")
-                print("Start program %s to flash" % (bin_file))
+                print("Start program %s to external flash" % (bin_file))
                 start = time()
                 programmer.program(bin_file, format='bin', base_address=smif_flash_region.start)
                 stop = time()
@@ -421,7 +419,7 @@ def flash_test(board_id):
                 hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_smif_bank0_internal.hex"]))
 
                 programmer = loader.FileProgrammer(session, chip_erase="chip")
-                print("Start program %s to work flash" % (hex_file))
+                print("Start program %s to external flash" % (hex_file))
                 start = time()
                 programmer.program(hex_file)
                 stop = time()
@@ -442,29 +440,6 @@ def flash_test(board_id):
                 else:
                     print("TEST FAILED")
                 test_count += 1
-
-        print("\n------ Test mass erase ------")
-        hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
-
-        programmer = loader.FileProgrammer(session, chip_erase="chip")
-        print("Start program %s to main flash"% (hex_file))
-        programmer.program(hex_file)
-        session.target.mass_erase()
-
-        for rom_region in memory_map.get_regions_of_type(MemoryType.FLASH):
-            if rom_region.start == 0x16000000:
-                continue
-            rom_start = rom_region.start
-            rom_size = rom_region.length
-
-            data_read = cy_read_memory_block8(flash_region, target, rom_start, rom_size)
-
-            if is_erased(data_read, rom_region.erased_byte_value):
-                print("TEST PASSED")
-                test_pass_count += 1
-            else:
-                print("TEST FAILED")
-            test_count += 1
 
         print("\n------ Erase Program BlinkFull Verify Reset Run CM4 ------")
         session.target.mass_erase()
@@ -489,7 +464,7 @@ def flash_test(board_id):
          
         data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
-            if test_kit != "CY8CKIT-064_SPM":
+            if test_kit != "CY8CKIT-064_CM4":
             #PROGTOOLS - 521
                 target.reset()
                 sleep(3)
@@ -525,7 +500,7 @@ def flash_test(board_id):
 
         data_flashed = target.read_memory_block8(main_flash_region.start, len(data))
         if same(data_flashed, data):
-            if test_kit != "CY8CKIT-064_SPM":
+            if test_kit != "CY8CKIT-064_CM4":
             #PROGTOOLS-521
 
                 target.reset()
@@ -654,6 +629,48 @@ def flash_test(board_id):
                         print("TEST FAILED")
                 else:
                     print("TEST FAILED")
+            else:
+                print("TEST FAILED")
+            test_count += 1
+
+        print("\n------ Test Buffer clear before programming PROGTOOLS-549 ------")
+        session.target.mass_erase()
+        main_flash_region = memory_map.get_boot_memory()
+
+        data = [0x55] * main_flash_region.blocksize * 2
+        data.append(0x55)
+        main_flash_region.flash.flash_block(main_flash_region.start, data, False, None, progress_cb=print_progress())
+
+        data.append(main_flash_region.erased_byte_value) 
+
+        data_flashed = cy_read_memory_block8(main_flash_region, target, main_flash_region.start, len(data))
+
+        if same(data_flashed, data):
+            print("TEST PASSED")
+            test_pass_count += 1
+        else:
+            print("TEST FAILED")
+        test_count += 1
+
+        print("\n------ Test mass erase ------")
+        hex_file = os.path.join(TEST_DATA_PATH, test_kit, "".join([test_kit, "_main.hex"]))
+
+        programmer = loader.FileProgrammer(session, chip_erase="chip")
+        print("Start program %s to main flash" % (hex_file))
+        programmer.program(hex_file)
+        session.target.mass_erase()
+
+        for rom_region in memory_map.get_regions_of_type(MemoryType.FLASH):
+            if rom_region.start == 0x16000000:
+                continue
+            rom_start = rom_region.start
+            rom_size = rom_region.length
+
+            data_read = cy_read_memory_block8(flash_region, target, rom_start, rom_size)
+
+            if is_erased(data_read, rom_region.erased_byte_value):
+                print("TEST PASSED")
+                test_pass_count += 1
             else:
                 print("TEST FAILED")
             test_count += 1
