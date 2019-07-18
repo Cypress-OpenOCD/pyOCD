@@ -200,23 +200,21 @@ class FileProgrammer(object):
     def _program_elf(self, file_obj, **kwargs):
         elf = ELFFile(file_obj)
         for segment in elf.iter_segments():
-            for section in elf.iter_sections():
-                if not section.is_null() and segment.section_in_segment(section):
-                    if section['sh_type'] == 'SHT_PROGBITS':
-                        addr = segment['p_paddr'] + section['sh_offset'] - segment['p_offset']
-                        if sys.version_info[0] == 3:
-                            data = section.data()
-                        else:
-                            data = map(ord, section.data())
-                        LOG.debug("Writing section %s LMA:0x%08x, VMA:0x%08x", section.name, 
-                                  segment['p_paddr'], segment['p_vaddr'])
-                        try:
-                            self._loader.add_data(addr, data)
-                        except ValueError as e:
-                            LOG.warning("Failed to add data chunk: %s", e)
-                    else:
-                        LOG.debug("Skipping section %s LMA:0x%08x, VMA:0x%08x", section.name, 
-                                  segment['p_paddr'], segment['p_vaddr'])
+            if segment.header.p_type == 'PT_LOAD' and segment.header.p_filesz != 0:
+                addr = segment['p_paddr']
+                if sys.version_info[0] == 3:
+                    data = segment.data()
+                else:
+                    data = map(ord, segment.data())
+                LOG.debug("Writing segment LMA:0x%08x, VMA:0x%08x, size %d", addr, 
+                          segment['p_vaddr'], segment.header.p_filesz)
+                try:
+                    self._loader.add_data(addr, data)
+                except ValueError as e:
+                    LOG.warning("Failed to add data chunk: %s", e)
+            else:
+                LOG.debug("Skipping segment LMA:0x%08x, VMA:0x%08x, size %d", addr,
+                          segment['p_vaddr'], segment.header.p_filesz)
                         
 
 class FlashEraser(object):
